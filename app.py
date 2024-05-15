@@ -155,7 +155,7 @@ download_model = "https://huggingface.co/frankjoshua/toonyou_beta6/resolve/main/
 download_vae = "https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/anything_fp16.safetensors"
 # - **Download LoRAs**
 download_lora = "https://civitai.com/api/download/models/97655, https://civitai.com/api/download/models/124358"
-load_diffusers_format_model = ['runwayml/stable-diffusion-v1-5', 'stabilityai/stable-diffusion-xl-base-1.0']
+load_diffusers_format_model = ['stabilityai/stable-diffusion-xl-base-1.0', 'runwayml/stable-diffusion-v1-5']
 CIVITAI_API_KEY = ""
 hf_token = ""
 
@@ -193,7 +193,7 @@ for url_embed in download_embeds:
 # Build list models
 embed_list = get_model_list(directory_embeds)
 model_list = get_model_list(directory_models)
-model_list = model_list + load_diffusers_format_model
+model_list = load_diffusers_format_model + model_list
 lora_model_list = get_model_list(directory_loras)
 lora_model_list.insert(0, "None")
 vae_model_list = get_model_list(directory_vaes)
