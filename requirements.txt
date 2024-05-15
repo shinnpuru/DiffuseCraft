@@ -1,0 +1,4 @@
+git+https://github.com/R3gm/stablepy.git@lazyload
+torch==2.2.0
+gdown
+opencv-python
