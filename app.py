@@ -602,6 +602,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     preprocessor_name_gui = gr.Dropdown(label="Preprocessor Name", choices=preprocessor_controlnet["canny"])
     
                     def change_preprocessor_choices(task):
+                        task = task_stablepy[task]
                         if task in preprocessor_controlnet.keys():
                             choices_task = preprocessor_controlnet[task]
                         else:
