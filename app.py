@@ -2,6 +2,11 @@ task_stablepy = {
     'txt2img': 'txt2img',
     'img2img': 'img2img',
     'inpaint': 'inpaint',
+    'sdxl_canny T2I Adapter': 'sdxl_canny',
+    'sdxl_sketch  T2I Adapter': 'sdxl_sketch',
+    'sdxl_lineart  T2I Adapter': 'sdxl_lineart',
+    'sdxl_depth-midas  T2I Adapter': 'sdxl_depth-midas',
+    'sdxl_openpose  T2I Adapter': 'sdxl_openpose',
     'sd_openpose ControlNet': 'openpose',
     'sd_canny ControlNet': 'canny',
     'sd_mlsd ControlNet': 'mlsd',
@@ -14,11 +19,6 @@ task_stablepy = {
     'sd_lineart_anime ControlNet': 'lineart_anime',
     'sd_shuffle ControlNet': 'shuffle',
     'sd_ip2p ControlNet': 'ip2p',
-    'sdxl_canny T2I Adapter': 'sdxl_canny',
-    'sdxl_sketch  T2I Adapter': 'sdxl_sketch',
-    'sdxl_lineart  T2I Adapter': 'sdxl_lineart',
-    'sdxl_depth-midas  T2I Adapter': 'sdxl_depth-midas',
-    'sdxl_openpose  T2I Adapter': 'sdxl_openpose'
 }
 
 task_model_list = list(task_stablepy.keys())
@@ -589,7 +589,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 clip_skip_gui = gr.Checkbox(value=True, label="Layer 2 Clip Skip")
                 free_u_gui = gr.Checkbox(value=True, label="FreeU")
                 seed_gui = gr.Number(minimum=-1, maximum=9999999999, value=-1, label="Seed")
-                num_images_gui = gr.Slider(minimum=1, maximum=16, step=1, value=1, label="Images")
+                num_images_gui = gr.Slider(minimum=1, maximum=8, step=1, value=1, label="Images")
                 prompt_s_options = [("Compel (default) format: (word)weight", "Compel"), ("Classic (sd1.5 long prompts) format: (word:weight)", "Classic")]
                 prompt_syntax_gui = gr.Dropdown(label="Prompt Syntax", choices=prompt_s_options, value=prompt_s_options[0][1])
                 vae_model_gui = gr.Dropdown(label="VAE Model", choices=vae_model_list)
@@ -670,7 +670,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 with gr.Accordion("Textual inversion", open=False, visible=False):
                     active_textual_inversion_gui = gr.Checkbox(value=False, label="Active Textual Inversion in prompt")
     
-                with gr.Accordion("Hires fix", open=False, visible=False):
+                with gr.Accordion("Hires fix", open=False, visible=True):
     
                     upscaler_keys = list(upscaler_dict_gui.keys())
     
