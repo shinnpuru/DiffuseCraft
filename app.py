@@ -287,7 +287,7 @@ class GuiSD:
     def __init__(self):
         self.model = None
 
-    @spaces.GPU
+    @spaces.GPU(duration=120)
     def infer(self, model, pipe_params):
         images, image_list = model(**pipe_params)
         return images
@@ -685,8 +685,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     hires_prompt_gui = gr.Textbox(label="Hires Prompt", placeholder="Main prompt will be use", lines=3)
                     hires_negative_prompt_gui = gr.Textbox(label="Hires Negative Prompt", placeholder="Main negative prompt will be use", lines=3)
     
-                with gr.Accordion("Detailfix", open=False, visible=False):
-    
+                with gr.Accordion("Detailfix", open=False, visible=True):
+
                     # Adetailer Inpaint Only
                     adetailer_inpaint_only_gui = gr.Checkbox(label="Inpaint only", value=True)
     
@@ -722,10 +722,13 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         mask_dilation_b_gui = gr.Number(label="Mask dilation:", value=4, minimum=1)
                         mask_blur_b_gui = gr.Number(label="Mask blur:", value=4, minimum=1)
                         mask_padding_b_gui = gr.Number(label="Mask padding:", value=32, minimum=1)
-    
-                with gr.Accordion("Other settings", open=False, visible=False):
+
+                with gr.Accordion("Other settings", open=False, visible=True):
                     hires_before_adetailer_gui = gr.Checkbox(value=False, label="Hires Before Adetailer")
                     hires_after_adetailer_gui = gr.Checkbox(value=True, label="Hires After Adetailer")
+                    generator_in_cpu_gui = gr.Checkbox(value=False, label="Generator in CPU")
+
+                with gr.Accordion("More settings", open=False, visible=False):
                     loop_generation_gui = gr.Slider(minimum=1, value=1, label="Loop Generation")
                     leave_progress_bar_gui = gr.Checkbox(value=True, label="Leave Progress Bar")
                     disable_progress_bar_gui = gr.Checkbox(value=False, label="Disable Progress Bar")
@@ -737,7 +740,6 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     retain_detailfix_model_previous_load_gui = gr.Checkbox(value=False, label="Retain Detailfix Model Previous Load")
                     retain_hires_model_previous_load_gui = gr.Checkbox(value=False, label="Retain Hires Model Previous Load")
                     xformers_memory_efficient_attention_gui = gr.Checkbox(value=False, label="Xformers Memory Efficient Attention")
-                    generator_in_cpu_gui = gr.Checkbox(value=False, label="Generator in CPU")
 
     with gr.Tab("Inpaint mask maker", render=True):
         
