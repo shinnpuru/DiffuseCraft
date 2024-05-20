@@ -741,7 +741,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     retain_hires_model_previous_load_gui = gr.Checkbox(value=False, label="Retain Hires Model Previous Load")
                     xformers_memory_efficient_attention_gui = gr.Checkbox(value=False, label="Xformers Memory Efficient Attention")
 
-        with gr.Accordion("Examples", open=False, visible=True):
+        with gr.Accordion("Examples", open=True, visible=True):
             gr.Examples(
                 examples=[
                     [
