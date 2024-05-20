@@ -563,8 +563,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             with gr.Column(scale=2):
                 task_gui = gr.Dropdown(label="Task", choices=task_model_list, value=task_model_list[0])
                 model_name_gui = gr.Dropdown(label="Model", choices=model_list, value=model_list[0], allow_custom_value=True)
-                prompt_gui = gr.Textbox(lines=5, placeholder="Enter prompt")
-                neg_prompt_gui = gr.Textbox(lines=3, placeholder="Enter Neg prompt")
+                prompt_gui = gr.Textbox(lines=5, placeholder="Enter prompt", label="Prompt")
+                neg_prompt_gui = gr.Textbox(lines=3, placeholder="Enter Neg prompt", label="Negative prompt")
                 generate_button = gr.Button(value="GENERATE", variant="primary")
     
                 result_images = gr.Gallery(
@@ -584,8 +584,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 steps_gui = gr.Slider(minimum=1, maximum=100, step=1, value=30, label="Steps")
                 cfg_gui = gr.Slider(minimum=0, maximum=30, step=0.5, value=7.5, label="CFG")
                 sampler_gui = gr.Dropdown(label="Sampler", choices=scheduler_names, value="Euler a")
-                img_height_gui = gr.Slider(minimum=64, maximum=4096, step=8, value=1024, label="Img Height")
                 img_width_gui = gr.Slider(minimum=64, maximum=4096, step=8, value=1024, label="Img Width")
+                img_height_gui = gr.Slider(minimum=64, maximum=4096, step=8, value=1024, label="Img Height")
                 clip_skip_gui = gr.Checkbox(value=True, label="Layer 2 Clip Skip")
                 free_u_gui = gr.Checkbox(value=True, label="FreeU")
                 seed_gui = gr.Number(minimum=-1, maximum=9999999999, value=-1, label="Seed")
@@ -741,7 +741,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     retain_hires_model_previous_load_gui = gr.Checkbox(value=False, label="Retain Hires Model Previous Load")
                     xformers_memory_efficient_attention_gui = gr.Checkbox(value=False, label="Xformers Memory Efficient Attention")
 
-        with gr.Accordion("Examples", open=True, visible=True):
+        with gr.Accordion("Examples", open=False, visible=True):
             gr.Examples(
                 examples=[
                     [
@@ -763,8 +763,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         None,
                         1.0,
                         "Euler a",
-                        1024,
-                        1024,
+                        1152,
+                        896,
                         "cagliostrolab/animagine-xl-3.1",
                         None, # vae
                         "txt2img",
@@ -831,11 +831,11 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         "Nearest",
                     ],
                     [
-                        "in this scene, a man wearing an elaborate, multicolored suit that looks like a patchwork of different geometric patterns and hues stands against a stark white background. his eyes are hidden behind a pair of reflective sunglasses, casting an air of mystery around him. he holds a gold pocket watch in his left hand, its intricate details glinting under the light. the room is silent, with only the faint ticking sound of the pocket watch breaking the eerie silence. a cloud of suspense hangs in the air as if something momentous is about to happen. the anticipation is palpable, and every eye is on him, waiting for the second hand to complete its revolution, best quality, masterpiece, high quality, highres,",
+                        "((masterpiece)), best quality, blonde disco girl, detailed face, realistic face, realistic hair, dynamic pose, pink pvc, intergalactic disco background, pastel lights, dynamic contrast, airbrush, fine detail, 70s vibe, midriff  ",
                         "(worst quality:1.2), (bad quality:1.2), (poor quality:1.2), (missing fingers:1.2), bad-artist-anime, bad-artist, bad-picture-chill-75v",
                         1,
-                        52,
-                        7.5,
+                        48,
+                        3.5,
                         True,
                         -1,
                         None,
@@ -848,15 +848,15 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         1.0,
                         None,
                         1.0,
-                        "DPM++ 2M Ef",
+                        "DPM++ 2M SDE Lu",
                         1024,
                         1024,
                         "misri/epicrealismXL_v7FinalDestination",
                         None, # vae
-                        "txt2img",
-                        None, # img conttol
+                        "sdxl_canny T2I Adapter",
+                        "image.webp", # img conttol
                         "Canny", # preprocessor
-                        512, # preproc resolution
+                        1024, # preproc resolution
                         1024, # img resolution
                         None, # Style prompt
                         None, # Style json
@@ -958,6 +958,49 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         False, # ti
                         "Classic",
                         None,
+                    ],
+                    [
+                        "1girl,face,curly hair,red hair,white background,",
+                        "(worst quality:2),(low quality:2),(normal quality:2),lowres,watermark,",
+                        1,
+                        38,
+                        5.,
+                        True,
+                        -1,
+                        None,
+                        1.0,
+                        None,
+                        1.0,
+                        None,
+                        1.0,                        
+                        None,
+                        1.0,
+                        None,
+                        1.0,
+                        "DPM++ 2M SDE Karras",
+                        512,
+                        512,
+                        "digiplay/majicMIX_realistic_v7",
+                        None, # vae
+                        "sd_canny ControlNet",
+                        "image.webp", # img conttol
+                        "Canny", # preprocessor
+                        512, # preproc resolution
+                        1024, # img resolution
+                        None, # Style prompt
+                        None, # Style json
+                        None, # img Mask
+                        0.35, # strength
+                        100, # low th canny
+                        200, # high th canny
+                        0.1, # value mstd
+                        0.1, # distance mstd
+                        1.0, # cn scale
+                        0., # cn start
+                        1., # cn end
+                        False, # ti
+                        "Compel",
+                        "Nearest",
                     ],
                 ],
                 fn=sd_gen.generate_pipeline,
