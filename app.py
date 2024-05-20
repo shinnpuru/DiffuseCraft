@@ -335,6 +335,17 @@ class GuiSD:
         controlnet_stop_threshold,
         textual_inversion,
         syntax_weights,
+        upscaler_model_path,
+        upscaler_increases_size,
+        esrgan_tile,
+        esrgan_tile_overlap,
+        hires_steps,
+        hires_denoising_strength,
+        hires_sampler,
+        hires_prompt,
+        hires_negative_prompt,
+        hires_before_adetailer,
+        hires_after_adetailer,
         loop_generation,
         leave_progress_bar,
         disable_progress_bar,
@@ -348,17 +359,6 @@ class GuiSD:
         t2i_adapter_preprocessor,
         t2i_adapter_conditioning_scale,
         t2i_adapter_conditioning_factor,
-        upscaler_model_path,
-        upscaler_increases_size,
-        esrgan_tile,
-        esrgan_tile_overlap,
-        hires_steps,
-        hires_denoising_strength,
-        hires_sampler,
-        hires_prompt,
-        hires_negative_prompt,
-        hires_before_adetailer,
-        hires_after_adetailer,
         xformers_memory_efficient_attention,
         freeu,
         generator_in_cpu,
@@ -741,6 +741,273 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     retain_hires_model_previous_load_gui = gr.Checkbox(value=False, label="Retain Hires Model Previous Load")
                     xformers_memory_efficient_attention_gui = gr.Checkbox(value=False, label="Xformers Memory Efficient Attention")
 
+        with gr.Accordion("Examples", open=False, visible=True):
+            gr.Examples(
+                examples=[
+                    [
+                        "1girl, souryuu asuka langley, neon genesis evangelion, plugsuit, pilot suit, red bodysuit, sitting, crossing legs, black eye patch, cat hat, throne, symmetrical, looking down, from bottom, looking at viewer, outdoors, masterpiece, best quality, very aesthetic, absurdres",
+                        "nsfw, lowres, (bad), text, error, fewer, extra, missing, worst quality, jpeg artifacts, low quality, watermark, unfinished, displeasing, oldest, early, chromatic aberration, signature, extra digits, artistic error, username, scan, [abstract]",
+                        1,
+                        30,
+                        7.5,
+                        True,
+                        -1,
+                        None,
+                        1.0,
+                        None,
+                        1.0,
+                        None,
+                        1.0,                        
+                        None,
+                        1.0,
+                        None,
+                        1.0,
+                        "Euler a",
+                        1024,
+                        1024,
+                        "cagliostrolab/animagine-xl-3.1",
+                        None, # vae
+                        "txt2img",
+                        None, # img conttol
+                        "Canny", # preprocessor
+                        512, # preproc resolution
+                        1024, # img resolution
+                        None, # Style prompt
+                        None, # Style json
+                        None, # img Mask
+                        0.35, # strength
+                        100, # low th canny
+                        200, # high th canny
+                        0.1, # value mstd
+                        0.1, # distance mstd
+                        1.0, # cn scale
+                        0., # cn start
+                        1., # cn end
+                        False, # ti
+                        "Classic",
+                        "Nearest",
+                    ],
+                    [
+                        "score_9, score_8_up, score_8, medium breasts, cute, eyelashes , princess Zelda OOT, cute small face, long hair, crown braid, hairclip, pointy ears, soft curvy body, solo, looking at viewer, smile, blush, white dress, medium body, (((holding the Master Sword))), standing, deep forest in the background",
+                        "score_6, score_5, score_4, busty, ugly face, mutated hands, low res, blurry face, black and white,",
+                        1,
+                        30,
+                        5.,
+                        True,
+                        -1,
+                        None,
+                        1.0,
+                        None,
+                        1.0,
+                        None,
+                        1.0,                        
+                        None,
+                        1.0,
+                        None,
+                        1.0,
+                        "DPM++ 2M Karras",
+                        1024,
+                        1024,
+                        "kitty7779/ponyDiffusionV6XL",
+                        None, # vae
+                        "txt2img",
+                        None, # img conttol
+                        "Canny", # preprocessor
+                        512, # preproc resolution
+                        1024, # img resolution
+                        None, # Style prompt
+                        None, # Style json
+                        None, # img Mask
+                        0.35, # strength
+                        100, # low th canny
+                        200, # high th canny
+                        0.1, # value mstd
+                        0.1, # distance mstd
+                        1.0, # cn scale
+                        0., # cn start
+                        1., # cn end
+                        False, # ti
+                        "Classic",
+                        "Nearest",
+                    ],
+                    [
+                        "in this scene, a man wearing an elaborate, multicolored suit that looks like a patchwork of different geometric patterns and hues stands against a stark white background. his eyes are hidden behind a pair of reflective sunglasses, casting an air of mystery around him. he holds a gold pocket watch in his left hand, its intricate details glinting under the light. the room is silent, with only the faint ticking sound of the pocket watch breaking the eerie silence. a cloud of suspense hangs in the air as if something momentous is about to happen. the anticipation is palpable, and every eye is on him, waiting for the second hand to complete its revolution, best quality, masterpiece, high quality, highres,",
+                        "(worst quality:1.2), (bad quality:1.2), (poor quality:1.2), (missing fingers:1.2), bad-artist-anime, bad-artist, bad-picture-chill-75v",
+                        1,
+                        52,
+                        7.5,
+                        True,
+                        -1,
+                        None,
+                        1.0,
+                        None,
+                        1.0,
+                        None,
+                        1.0,                        
+                        None,
+                        1.0,
+                        None,
+                        1.0,
+                        "DPM++ 2M Ef",
+                        1024,
+                        1024,
+                        "misri/epicrealismXL_v7FinalDestination",
+                        None, # vae
+                        "txt2img",
+                        None, # img conttol
+                        "Canny", # preprocessor
+                        512, # preproc resolution
+                        1024, # img resolution
+                        None, # Style prompt
+                        None, # Style json
+                        None, # img Mask
+                        0.35, # strength
+                        100, # low th canny
+                        200, # high th canny
+                        0.1, # value mstd
+                        0.1, # distance mstd
+                        1.0, # cn scale
+                        0., # cn start
+                        1., # cn end
+                        False, # ti
+                        "Classic",
+                        None,
+                    ],
+                    [
+                        "masterpiece,high resolution,japanese town street background,fantasy world,magical,mountains forest background,stairs,(torii:1.2),masterpiece,cinematic,visual key,best quality,by hayao miyazaki,by makoto shinkai,soft dim lighting,pastel colors,night,stars",
+                        "(low quality, worst quality:1.4), (bad_prompt:0.8), (monochrome:1.1), (greyscale), painting, cartoon, comic, anime, manga, drawing, 2d, flat, crayon, sketch",
+                        1,
+                        50,
+                        4.,
+                        True,
+                        -1,
+                        None,
+                        1.0,
+                        None,
+                        1.0,
+                        None,
+                        1.0,                        
+                        None,
+                        1.0,
+                        None,
+                        1.0,
+                        "DPM++ 2M Karras",
+                        1024,
+                        1024,
+                        "misri/juggernautXL_juggernautX",
+                        None, # vae
+                        "txt2img",
+                        None, # img conttol
+                        "Canny", # preprocessor
+                        512, # preproc resolution
+                        1024, # img resolution
+                        None, # Style prompt
+                        None, # Style json
+                        None, # img Mask
+                        0.35, # strength
+                        100, # low th canny
+                        200, # high th canny
+                        0.1, # value mstd
+                        0.1, # distance mstd
+                        1.0, # cn scale
+                        0., # cn start
+                        1., # cn end
+                        False, # ti
+                        "Classic",
+                        None,
+                    ],
+                    [
+                        "1girl, solo, black dress, black hair, black theme, dress, eyelashes, jewelry, makeup, parted lips, purple eyes, ring, short hair, silk, silver hair, snake, masterpiece, best quality",
+                        "(low quality, worst quality:1.4), (bad_prompt:0.8), (monochrome:1.1), (greyscale), painting, cartoon, comic, anime, manga, drawing, 2d, flat, crayon, sketch",
+                        1,
+                        50,
+                        4.,
+                        True,
+                        -1,
+                        None,
+                        1.0,
+                        None,
+                        1.0,
+                        None,
+                        1.0,                        
+                        None,
+                        1.0,
+                        None,
+                        1.0,
+                        "DPM++ 2M Karras",
+                        1344,
+                        896,
+                        "misri/anima_pencil-XL-v4.0.0",
+                        None, # vae
+                        "txt2img",
+                        None, # img conttol
+                        "Canny", # preprocessor
+                        512, # preproc resolution
+                        1024, # img resolution
+                        None, # Style prompt
+                        None, # Style json
+                        None, # img Mask
+                        0.35, # strength
+                        100, # low th canny
+                        200, # high th canny
+                        0.1, # value mstd
+                        0.1, # distance mstd
+                        1.0, # cn scale
+                        0., # cn start
+                        1., # cn end
+                        False, # ti
+                        "Classic",
+                        None,
+                    ],
+                ],
+                fn=sd_gen.generate_pipeline,
+                inputs=[
+                    prompt_gui,
+                    neg_prompt_gui,
+                    num_images_gui,
+                    steps_gui,
+                    cfg_gui,
+                    clip_skip_gui,
+                    seed_gui,
+                    lora1_gui,
+                    lora_scale_1_gui,
+                    lora2_gui,
+                    lora_scale_2_gui,
+                    lora3_gui,
+                    lora_scale_3_gui,
+                    lora4_gui,
+                    lora_scale_4_gui,
+                    lora5_gui,
+                    lora_scale_5_gui,
+                    sampler_gui,
+                    img_height_gui,
+                    img_width_gui,
+                    model_name_gui,
+                    vae_model_gui,
+                    task_gui,
+                    image_control,
+                    preprocessor_name_gui,
+                    preprocess_resolution_gui,
+                    image_resolution_gui,
+                    style_prompt_gui,
+                    style_json_gui,
+                    image_mask_gui,
+                    strength_gui,
+                    low_threshold_gui,
+                    high_threshold_gui,
+                    value_threshold_gui,
+                    distance_threshold_gui,
+                    control_net_output_scaling_gui,
+                    control_net_start_threshold_gui,
+                    control_net_stop_threshold_gui,
+                    active_textual_inversion_gui,
+                    prompt_syntax_gui,
+                    upscaler_model_path_gui,
+                ],
+                outputs=[result_images],
+                cache_examples=False,
+            )
+    
     with gr.Tab("Inpaint mask maker", render=True):
         
         def create_mask_now(img, invert):            
@@ -847,6 +1114,17 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             control_net_stop_threshold_gui,
             active_textual_inversion_gui,
             prompt_syntax_gui,
+            upscaler_model_path_gui,
+            upscaler_increases_size_gui,
+            esrgan_tile_gui,
+            esrgan_tile_overlap_gui,
+            hires_steps_gui,
+            hires_denoising_strength_gui,
+            hires_sampler_gui,
+            hires_prompt_gui,
+            hires_negative_prompt_gui,
+            hires_before_adetailer_gui,
+            hires_after_adetailer_gui,
             loop_generation_gui,
             leave_progress_bar_gui,
             disable_progress_bar_gui,
@@ -860,17 +1138,6 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             t2i_adapter_preprocessor_gui,
             adapter_conditioning_scale_gui,
             adapter_conditioning_factor_gui,
-            upscaler_model_path_gui,
-            upscaler_increases_size_gui,
-            esrgan_tile_gui,
-            esrgan_tile_overlap_gui,
-            hires_steps_gui,
-            hires_denoising_strength_gui,
-            hires_sampler_gui,
-            hires_prompt_gui,
-            hires_negative_prompt_gui,
-            hires_before_adetailer_gui,
-            hires_after_adetailer_gui,
             xformers_memory_efficient_attention_gui,
             free_u_gui,
             generator_in_cpu_gui,
