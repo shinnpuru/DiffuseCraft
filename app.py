@@ -589,7 +589,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 clip_skip_gui = gr.Checkbox(value=True, label="Layer 2 Clip Skip")
                 free_u_gui = gr.Checkbox(value=True, label="FreeU")
                 seed_gui = gr.Number(minimum=-1, maximum=9999999999, value=-1, label="Seed")
-                num_images_gui = gr.Slider(minimum=1, maximum=8, step=1, value=1, label="Images")
+                num_images_gui = gr.Slider(minimum=1, maximum=4, step=1, value=1, label="Images")
                 prompt_s_options = [("Compel (default) format: (word)weight", "Compel"), ("Classic (sd1.5 long prompts) format: (word:weight)", "Classic")]
                 prompt_syntax_gui = gr.Dropdown(label="Prompt Syntax", choices=prompt_s_options, value=prompt_s_options[0][1])
                 vae_model_gui = gr.Dropdown(label="VAE Model", choices=vae_model_list)
