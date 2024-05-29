@@ -152,10 +152,25 @@ os.makedirs(directory_vaes, exist_ok=True)
 # - **Download SD 1.5 Models**
 download_model = "https://huggingface.co/frankjoshua/toonyou_beta6/resolve/main/toonyou_beta6.safetensors"
 # - **Download VAEs**
-download_vae = "https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/anything_fp16.safetensors"
+download_vae = "https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-c-1.1-b-0.5.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-blessed.safetensors?download=true, https://huggingface.co/digiplay/VAE/resolve/main/vividReal_v20.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/kl-f8-anime2_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/ClearVAE_V2.3_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/blessed2_fp16.safetensors?download=true, https://huggingface.co/NoCrypt/blessed_vae/resolve/main/blessed-fix.vae.pt?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/anything_fp16.safetensors"
 # - **Download LoRAs**
 download_lora = "https://civitai.com/api/download/models/97655, https://civitai.com/api/download/models/124358"
-load_diffusers_format_model = ['stabilityai/stable-diffusion-xl-base-1.0', 'runwayml/stable-diffusion-v1-5']
+load_diffusers_format_model = [
+    'stabilityai/stable-diffusion-xl-base-1.0',
+    'misri/epicrealismXL_v7FinalDestination',
+    'misri/juggernautXL_juggernautX',
+    'misri/anima_pencil-XL-v4.0.0',
+    'cagliostrolab/animagine-xl-3.1',
+    'misri/kohakuXLEpsilon_rev1',
+    'kitty7779/ponyDiffusionV6XL',
+    'runwayml/stable-diffusion-v1-5',
+    'digiplay/majicMIX_realistic_v6',
+    'digiplay/majicMIX_realistic_v7',
+    'digiplay/DreamShaper_8',
+    'digiplay/BeautifulArt_v1',
+    'digiplay/DarkSushi2.5D_v1',
+]
+
 CIVITAI_API_KEY = ""
 hf_token = ""
 
@@ -550,6 +565,25 @@ CSS ="""
 #gallery { flex-grow: 1; }
 """
 
+sdxl_task = task_model_list[:3] + task_model_list[3:8]
+sd_task = task_model_list[:3] + task_model_list[8:]
+
+
+def update_task_options(model_name, task_name):
+    if model_name in model_list:
+        if "xl" in model_name.lower():
+            new_choices = sdxl_task
+        else:
+            new_choices = sd_task
+
+        if task_name not in new_choices:
+            task_name = "txt2img"
+
+        return gr.update(value=task_name, choices=new_choices)
+    else:
+        return gr.update(value=task_name, choices=task_model_list)
+
+
 with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
     gr.Markdown("# 🧩 DiffuseCraft")
     gr.Markdown(
@@ -559,14 +593,21 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
     )
     with gr.Tab("Generation"):
         with gr.Row():
-    
+
             with gr.Column(scale=2):
-                task_gui = gr.Dropdown(label="Task", choices=task_model_list, value=task_model_list[0])
+
+                task_gui = gr.Dropdown(label="Task", choices=sdxl_task, value=task_model_list[0])
                 model_name_gui = gr.Dropdown(label="Model", choices=model_list, value=model_list[0], allow_custom_value=True)
                 prompt_gui = gr.Textbox(lines=5, placeholder="Enter prompt", label="Prompt")
                 neg_prompt_gui = gr.Textbox(lines=3, placeholder="Enter Neg prompt", label="Negative prompt")
                 generate_button = gr.Button(value="GENERATE", variant="primary")
-    
+
+                model_name_gui.change(
+                    update_task_options,
+                    [model_name_gui, task_gui],
+                    [task_gui],
+                )
+
                 result_images = gr.Gallery(
                     label="Generated images",
                     show_label=False,
@@ -597,7 +638,10 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 with gr.Accordion("ControlNet / Img2img / Inpaint", open=False, visible=True):
                     image_control = gr.Image(label="Image ControlNet/Inpaint/Img2img", type="filepath")
                     image_mask_gui = gr.Image(label="Image Mask", type="filepath")
-                    strength_gui = gr.Slider(minimum=0.01, maximum=1.0, step=0.01, value=0.35, label="Strength")
+                    strength_gui = gr.Slider(
+                        minimum=0.01, maximum=1.0, step=0.01, value=0.55, label="Strength",
+                        info="This option adjusts the level of changes for img2img and inpainting."
+                    )
                     image_resolution_gui = gr.Slider(minimum=64, maximum=2048, step=64, value=1024, label="Image Resolution")
                     preprocessor_name_gui = gr.Dropdown(label="Preprocessor Name", choices=preprocessor_controlnet["canny"])
     
@@ -670,11 +714,11 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
     
                 with gr.Accordion("Textual inversion", open=False, visible=False):
                     active_textual_inversion_gui = gr.Checkbox(value=False, label="Active Textual Inversion in prompt")
-    
+
                 with gr.Accordion("Hires fix", open=False, visible=True):
-    
+
                     upscaler_keys = list(upscaler_dict_gui.keys())
-    
+
                     upscaler_model_path_gui = gr.Dropdown(label="Upscaler", choices=upscaler_keys, value=upscaler_keys[0])
                     upscaler_increases_size_gui = gr.Slider(minimum=1.1, maximum=6., step=0.1, value=1.5, label="Upscale by")
                     esrgan_tile_gui = gr.Slider(minimum=0, value=100, maximum=500, step=1, label="ESRGAN Tile")
@@ -1050,20 +1094,20 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 outputs=[result_images],
                 cache_examples=False,
             )
-    
+
     with gr.Tab("Inpaint mask maker", render=True):
-        
+
         def create_mask_now(img, invert):            
             import numpy as np
             import time
-            
+
             time.sleep(0.5)
 
             transparent_image = img["layers"][0]
-            
+
             # Extract the alpha channel
             alpha_channel = np.array(transparent_image)[:, :, 3]
-            
+
             # Create a binary mask by thresholding the alpha channel
             binary_mask = alpha_channel > 1
 
@@ -1077,9 +1121,9 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
 
             # Convert the mask to uint8
             rgb_mask = rgb_mask.astype(np.uint8) * 255
-            
+
             return img["background"], rgb_mask
-            
+
         with gr.Row():
             with gr.Column(scale=2):
                 # image_base = gr.ImageEditor(label="Base image", show_label=True, brush=gr.Brush(colors=["#000000"]))
@@ -1212,15 +1256,9 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
         queue=True,
     )
 
-
-
-app.queue()  # default_concurrency_limit=40
+app.queue()
 
 app.launch(
-    # max_threads=40,
-    # share=False,
     show_error=True,
-    # quiet=False,
     debug=True,
-    # allowed_paths=["./assets/"],
 )
