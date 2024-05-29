@@ -636,7 +636,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     show_label=False,
                     elem_id="gallery",
                     columns=[2],
-                    rows=[3],
+                    rows=[2],
                     object_fit="contain",
                     # height="auto",
                     interactive=False,
