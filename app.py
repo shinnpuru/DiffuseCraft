@@ -417,13 +417,6 @@ class GuiSD:
                 type_model_precision=model_precision
             )
 
-        self.model.load_pipe(
-            model_name,
-            task_name=task,
-            vae_model=vae_model if vae_model != "None" else None,
-            type_model_precision=model_precision
-        )
-
         if task != "txt2img" and not image_control:
             raise ValueError("No control image found: To use this function, you have to upload an image in 'Image ControlNet/Inpaint/Img2img'")
 
@@ -443,10 +436,17 @@ class GuiSD:
 
             upscaler_model = f"./upscalers/{url_upscaler.split('/')[-1]}"
 
+        logging.getLogger("ultralytics").setLevel(logging.INFO if adetailer_verbose else logging.ERROR)
+
+        self.model.load_pipe(
+            model_name,
+            task_name=task,
+            vae_model=vae_model if vae_model != "None" else None,
+            type_model_precision=model_precision
+        )
+
         if textual_inversion and self.model.class_name == "StableDiffusionXLPipeline":
             print("No Textual inversion for SDXL")
-
-        logging.getLogger("ultralytics").setLevel(logging.INFO if adetailer_verbose else logging.ERROR)
 
         adetailer_params_A = {
             "face_detector_ad" : face_detector_ad_a,
