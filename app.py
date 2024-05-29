@@ -33,6 +33,8 @@ from stablepy.diffusers_vanilla.model import scheduler_names
 from stablepy.diffusers_vanilla.style_prompt_config import STYLE_NAMES
 import torch
 import re
+import shutil
+
 
 preprocessor_controlnet = {
   "openpose": [
@@ -152,9 +154,9 @@ os.makedirs(directory_vaes, exist_ok=True)
 # - **Download SD 1.5 Models**
 download_model = "https://huggingface.co/frankjoshua/toonyou_beta6/resolve/main/toonyou_beta6.safetensors"
 # - **Download VAEs**
-download_vae = "https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-c-1.1-b-0.5.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-blessed.safetensors?download=true, https://huggingface.co/digiplay/VAE/resolve/main/vividReal_v20.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/kl-f8-anime2_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/ClearVAE_V2.3_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/blessed2_fp16.safetensors?download=true, https://huggingface.co/NoCrypt/blessed_vae/resolve/main/blessed-fix.vae.pt?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/anything_fp16.safetensors"
+download_vae = "https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-c-1.1-b-0.5.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-blessed.safetensors?download=true, https://huggingface.co/digiplay/VAE/resolve/main/vividReal_v20.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/kl-f8-anime2_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/ClearVAE_V2.3_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/blessed2_fp16.safetensors?download=true"
 # - **Download LoRAs**
-download_lora = "https://civitai.com/api/download/models/97655, https://civitai.com/api/download/models/124358"
+download_lora = "https://civitai.com/api/download/models/135867, https://civitai.com/api/download/models/135931, https://civitai.com/api/download/models/177492, https://civitai.com/api/download/models/145907, https://huggingface.co/Linaqruf/anime-detailer-xl-lora/resolve/main/anime-detailer-xl.safetensors?download=true, https://huggingface.co/Linaqruf/style-enhancer-xl-lora/resolve/main/style-enhancer-xl.safetensors?download=true, https://civitai.com/api/download/models/28609"
 load_diffusers_format_model = [
     'stabilityai/stable-diffusion-xl-base-1.0',
     'misri/epicrealismXL_v7FinalDestination',
@@ -171,8 +173,8 @@ load_diffusers_format_model = [
     'digiplay/DarkSushi2.5D_v1',
 ]
 
-CIVITAI_API_KEY = ""
-hf_token = ""
+CIVITAI_API_KEY = os.environ.get("CIVITAI_API_KEY")
+hf_token = os.environ.get("HF_TOKEN")
 
 # Download stuffs
 for url in [url.strip() for url in download_model.split(',')]:
@@ -302,12 +304,16 @@ class GuiSD:
     def __init__(self):
         self.model = None
 
+    @spaces.GPU
+    def infer_short(self, model, pipe_params):
+        images, image_list = model(**pipe_params)
+        return images
+
     @spaces.GPU(duration=120)
     def infer(self, model, pipe_params):
         images, image_list = model(**pipe_params)
         return images
 
-    # @spaces.GPU
     def generate_pipeline(
         self,
         prompt,
@@ -401,7 +407,16 @@ class GuiSD:
         mask_blur_b,
         mask_padding_b,
     ):
-        
+
+        loras_list = [lora1, lora2, lora3, lora4, lora5]
+        for la in loras_list:
+            if (
+                la is not None
+                and "animetarot" in la.lower()
+                and "xl" in model_name.lower()
+            ):
+                gr.Info(f"The LoRA {la} is for SD 1.5, but you are using SDXL.")
+
         task = task_stablepy[task]
 
         # First load
@@ -437,6 +452,8 @@ class GuiSD:
             upscaler_model = f"./upscalers/{url_upscaler.split('/')[-1]}"
 
         logging.getLogger("ultralytics").setLevel(logging.INFO if adetailer_verbose else logging.ERROR)
+
+        print(model_name, vae_model, loras_list)
 
         self.model.load_pipe(
             model_name,
@@ -549,15 +566,21 @@ class GuiSD:
 
         # print(pipe_params)
 
-        return self.infer(self.model, pipe_params)
+        if (
+            (img_height > 1700 and img_width > 1700)
+            or (num_images > 1)
+            or (adetailer_active_a and adetailer_active_b)
+            or (upscaler_model and upscaler_increases_size > 1.7)
+            or (steps > 75)
+            or (image_resolution > 1048)
+        ):
+            print("Inference 2")
+            return self.infer(self.model, pipe_params)
+
+        return self.infer_short(self.model, pipe_params)
 
 
 sd_gen = GuiSD()
-
-title_tab_one = "<h2 style='color: #2C5F2D;'>SD Interactive</h2>"
-title_tab_adetailer = "<h2 style='color: #97BC62;'>Adetailer</h2>"
-title_tab_hires = "<h2 style='color: #97BC62;'>High-resolution</h2>"
-title_tab_settings = "<h2 style='color: #97BC62;'>Settings</h2>"
 
 CSS ="""
 .contain { display: flex; flex-direction: column; }
@@ -617,10 +640,10 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     object_fit="contain",
                     # height="auto",
                     interactive=False,
-                    preview=True,
+                    preview=False,
                     selected_index=50,
                 )
-    
+
             with gr.Column(scale=1):
                 steps_gui = gr.Slider(minimum=1, maximum=100, step=1, value=30, label="Steps")
                 cfg_gui = gr.Slider(minimum=0, maximum=30, step=0.5, value=7.5, label="CFG")
@@ -672,17 +695,17 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     adapter_conditioning_scale_gui = gr.Slider(minimum=0, maximum=5., step=0.1, value=1, label="Adapter Conditioning Scale")
                     adapter_conditioning_factor_gui = gr.Slider(minimum=0, maximum=1., step=0.01, value=0.55, label="Adapter Conditioning Factor (%)")
 
-                with gr.Accordion("LoRA", open=False, visible=False):
+                with gr.Accordion("LoRA", open=False, visible=True):
                     lora1_gui = gr.Dropdown(label="Lora1", choices=lora_model_list)
-                    lora_scale_1_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=1, label="Lora Scale 1")
+                    lora_scale_1_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 1")
                     lora2_gui = gr.Dropdown(label="Lora2", choices=lora_model_list)
-                    lora_scale_2_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=1, label="Lora Scale 2")
+                    lora_scale_2_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 2")
                     lora3_gui = gr.Dropdown(label="Lora3", choices=lora_model_list)
-                    lora_scale_3_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=1, label="Lora Scale 3")
+                    lora_scale_3_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 3")
                     lora4_gui = gr.Dropdown(label="Lora4", choices=lora_model_list)
-                    lora_scale_4_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=1, label="Lora Scale 4")
+                    lora_scale_4_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 4")
                     lora5_gui = gr.Dropdown(label="Lora5", choices=lora_model_list)
-                    lora_scale_5_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=1, label="Lora Scale 5")
+                    lora_scale_5_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 5")
     
                 with gr.Accordion("Styles", open=False, visible=True):
                     
