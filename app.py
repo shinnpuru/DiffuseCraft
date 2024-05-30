@@ -579,7 +579,7 @@ class GuiSD:
             print("Inference 2")
             return self.infer(self.model, pipe_params)
 
-        pribt("Inference 1")
+        print("Inference 1")
         return self.infer_short(self.model, pipe_params)
 
 
