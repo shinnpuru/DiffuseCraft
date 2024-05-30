@@ -154,7 +154,7 @@ os.makedirs(directory_vaes, exist_ok=True)
 # - **Download SD 1.5 Models**
 download_model = "https://huggingface.co/frankjoshua/toonyou_beta6/resolve/main/toonyou_beta6.safetensors"
 # - **Download VAEs**
-download_vae = "https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-c-1.1-b-0.5.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-blessed.safetensors?download=true, https://huggingface.co/digiplay/VAE/resolve/main/vividReal_v20.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/kl-f8-anime2_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/ClearVAE_V2.3_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/blessed2_fp16.safetensors?download=true"
+download_vae = "https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/resolve/main/sdxl.vae.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-c-1.1-b-0.5.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-blessed.safetensors?download=true, https://huggingface.co/digiplay/VAE/resolve/main/vividReal_v20.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/kl-f8-anime2_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/ClearVAE_V2.3_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/blessed2_fp16.safetensors?download=true"
 # - **Download LoRAs**
 download_lora = "https://civitai.com/api/download/models/135867, https://civitai.com/api/download/models/135931, https://civitai.com/api/download/models/177492, https://civitai.com/api/download/models/145907, https://huggingface.co/Linaqruf/anime-detailer-xl-lora/resolve/main/anime-detailer-xl.safetensors?download=true, https://huggingface.co/Linaqruf/style-enhancer-xl-lora/resolve/main/style-enhancer-xl.safetensors?download=true, https://civitai.com/api/download/models/28609"
 load_diffusers_format_model = [
@@ -408,14 +408,28 @@ class GuiSD:
         mask_padding_b,
     ):
 
+        vae_model = vae_model if vae_model != "None" else None
         loras_list = [lora1, lora2, lora3, lora4, lora5]
-        for la in loras_list:
-            if (
-                la is not None
-                and "animetarot" in la.lower()
-                and "xl" in model_name.lower()
-            ):
-                gr.Info(f"The LoRA {la} is for SD 1.5, but you are using SDXL.")
+
+        if model_name in model_list:
+            model_is_xl = "xl" in model_name.lower()
+            sdxl_in_vae = vae_model and "sdxl" in vae_model.lower()
+            model_type = "SDXL" if model_is_xl else "SD 1.5"
+            incompatible_vae = (model_is_xl and vae_model and not sdxl_in_vae) or (not model_is_xl and sdxl_in_vae)
+
+            if incompatible_vae:
+                gr.Info(
+                    f"The selected VAE is for a { 'SD 1.5' if model_is_xl else 'SDXL' } model, but you"
+                    f" are using a { model_type } model. The default VAE "
+                    "will be used."
+                )
+                vae_model = None
+
+            for la in loras_list:
+                if la is not None and la != "None":
+                    lora_type = "animetarot" in la.lower()
+                    if (model_is_xl and lora_type) or (not model_is_xl and not lora_type):
+                        gr.Info(f"The LoRA {la} is for { 'SD 1.5' if model_is_xl else 'SDXL' }, but you are using { model_type }.")
 
         task = task_stablepy[task]
 
