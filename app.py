@@ -568,7 +568,9 @@ class GuiSD:
 
         if (
             (img_height > 1700 and img_width > 1700)
-            or (num_images > 1)
+            or (num_images > 1 and img_height>1048 and img_width>1048)
+            or (num_images > 1 and upscaler_model)
+            or (num_images > 1 and adetailer_active_a or num_images > 1 and adetailer_active_b)
             or (adetailer_active_a and adetailer_active_b)
             or (upscaler_model and upscaler_increases_size > 1.7)
             or (steps > 75)
@@ -577,6 +579,7 @@ class GuiSD:
             print("Inference 2")
             return self.infer(self.model, pipe_params)
 
+        pribt("Inference 1")
         return self.infer_short(self.model, pipe_params)
 
 
