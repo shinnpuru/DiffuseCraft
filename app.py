@@ -467,7 +467,7 @@ class GuiSD:
 
         logging.getLogger("ultralytics").setLevel(logging.INFO if adetailer_verbose else logging.ERROR)
 
-        print(model_name, vae_model, loras_list)
+        print("Config model:", model_name, vae_model, loras_list)
 
         self.model.load_pipe(
             model_name,
