@@ -571,6 +571,7 @@ class GuiSD:
             or (num_images > 1 and img_height>1048 and img_width>1048)
             or (num_images > 1 and upscaler_model)
             or (num_images > 1 and adetailer_active_a or num_images > 1 and adetailer_active_b)
+            or (num_images > 1 and steps>50)
             or (adetailer_active_a and adetailer_active_b)
             or (upscaler_model and upscaler_increases_size > 1.7)
             or (steps > 75)
