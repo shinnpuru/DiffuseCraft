@@ -1,28 +1,3 @@
-task_stablepy = {
-    'txt2img': 'txt2img',
-    'img2img': 'img2img',
-    'inpaint': 'inpaint',
-    'sdxl_canny T2I Adapter': 'sdxl_canny',
-    'sdxl_sketch  T2I Adapter': 'sdxl_sketch',
-    'sdxl_lineart  T2I Adapter': 'sdxl_lineart',
-    'sdxl_depth-midas  T2I Adapter': 'sdxl_depth-midas',
-    'sdxl_openpose  T2I Adapter': 'sdxl_openpose',
-    'sd_openpose ControlNet': 'openpose',
-    'sd_canny ControlNet': 'canny',
-    'sd_mlsd ControlNet': 'mlsd',
-    'sd_scribble ControlNet': 'scribble',
-    'sd_softedge ControlNet': 'softedge',
-    'sd_segmentation ControlNet': 'segmentation',
-    'sd_depth ControlNet': 'depth',
-    'sd_normalbae ControlNet': 'normalbae',
-    'sd_lineart ControlNet': 'lineart',
-    'sd_lineart_anime ControlNet': 'lineart_anime',
-    'sd_shuffle ControlNet': 'shuffle',
-    'sd_ip2p ControlNet': 'ip2p',
-}
-
-task_model_list = list(task_stablepy.keys())
-
 #######################
 # UTILS
 #######################
@@ -34,7 +9,22 @@ from stablepy.diffusers_vanilla.style_prompt_config import STYLE_NAMES
 import torch
 import re
 import shutil
-
+import random
+from stablepy import (
+    CONTROLNET_MODEL_IDS,
+    VALID_TASKS,
+    T2I_PREPROCESSOR_NAME,
+    FLASH_LORA,
+    SCHEDULER_CONFIG_MAP,
+    scheduler_names,
+    IP_ADAPTER_MODELS,
+    IP_ADAPTERS_SD,
+    IP_ADAPTERS_SDXL,
+    REPO_IMAGE_ENCODER,
+    ALL_PROMPT_WEIGHT_OPTIONS,
+    SD15_TASKS,
+    SDXL_TASKS,
+)
 
 preprocessor_controlnet = {
   "openpose": [
@@ -87,6 +77,33 @@ preprocessor_controlnet = {
     "ip2p"
   ]
 }
+
+task_stablepy = {
+    'txt2img': 'txt2img',
+    'img2img': 'img2img',
+    'inpaint': 'inpaint',
+    # 'canny T2I Adapter': 'sdxl_canny_t2i',  # NO HAVE STEP CALLBACK PARAMETERS SO NOT WORKS WITH DIFFUSERS 0.29.0
+    # 'sketch  T2I Adapter': 'sdxl_sketch_t2i',
+    # 'lineart  T2I Adapter': 'sdxl_lineart_t2i',
+    # 'depth-midas  T2I Adapter': 'sdxl_depth-midas_t2i',
+    # 'openpose  T2I Adapter': 'sdxl_openpose_t2i',
+    'openpose ControlNet': 'openpose',
+    'canny ControlNet': 'canny',
+    'mlsd ControlNet': 'mlsd',
+    'scribble ControlNet': 'scribble',
+    'softedge ControlNet': 'softedge',
+    'segmentation ControlNet': 'segmentation',
+    'depth ControlNet': 'depth',
+    'normalbae ControlNet': 'normalbae',
+    'lineart ControlNet': 'lineart',
+    'lineart_anime ControlNet': 'lineart_anime',
+    'shuffle ControlNet': 'shuffle',
+    'ip2p ControlNet': 'ip2p',
+    'optical pattern ControlNet': 'pattern',
+    'tile realistic': 'sdxl_tile_realistic',
+}
+
+task_model_list = list(task_stablepy.keys())
 
 
 def download_things(directory, url, hf_token="", civitai_api_key=""):
@@ -154,9 +171,9 @@ os.makedirs(directory_vaes, exist_ok=True)
 # - **Download SD 1.5 Models**
 download_model = "https://huggingface.co/frankjoshua/toonyou_beta6/resolve/main/toonyou_beta6.safetensors"
 # - **Download VAEs**
-download_vae = "https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/resolve/main/sdxl.vae.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-c-1.1-b-0.5.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-blessed.safetensors?download=true, https://huggingface.co/digiplay/VAE/resolve/main/vividReal_v20.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/kl-f8-anime2_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/ClearVAE_V2.3_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/blessed2_fp16.safetensors?download=true"
+download_vae = "https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/resolve/main/sdxl.vae.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-c-1.1-b-0.5.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-blessed.safetensors?download=true, https://huggingface.co/digiplay/VAE/resolve/main/vividReal_v20.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true"
 # - **Download LoRAs**
-download_lora = "https://civitai.com/api/download/models/135867, https://civitai.com/api/download/models/135931, https://civitai.com/api/download/models/177492, https://civitai.com/api/download/models/145907, https://huggingface.co/Linaqruf/anime-detailer-xl-lora/resolve/main/anime-detailer-xl.safetensors?download=true, https://huggingface.co/Linaqruf/style-enhancer-xl-lora/resolve/main/style-enhancer-xl.safetensors?download=true, https://civitai.com/api/download/models/28609"
+download_lora = "https://civitai.com/api/download/models/135867, https://civitai.com/api/download/models/135931, https://civitai.com/api/download/models/177492, https://civitai.com/api/download/models/145907, https://huggingface.co/Linaqruf/anime-detailer-xl-lora/resolve/main/anime-detailer-xl.safetensors?download=true, https://huggingface.co/Linaqruf/style-enhancer-xl-lora/resolve/main/style-enhancer-xl.safetensors?download=true, https://civitai.com/api/download/models/28609, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SD15-8steps-CFG-lora.safetensors?download=true, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SDXL-8steps-CFG-lora.safetensors?download=true"
 load_diffusers_format_model = [
     'stabilityai/stable-diffusion-xl-base-1.0',
     'misri/epicrealismXL_v7FinalDestination',
@@ -165,7 +182,6 @@ load_diffusers_format_model = [
     'cagliostrolab/animagine-xl-3.1',
     'misri/kohakuXLEpsilon_rev1',
     'kitty7779/ponyDiffusionV6XL',
-    'runwayml/stable-diffusion-v1-5',
     'digiplay/majicMIX_realistic_v6',
     'digiplay/majicMIX_realistic_v7',
     'digiplay/DreamShaper_8',
@@ -191,16 +207,9 @@ for url in [url.strip() for url in download_lora.split(',')]:
 directory_embeds = 'embedings'
 os.makedirs(directory_embeds, exist_ok=True)
 download_embeds = [
-    'https://huggingface.co/datasets/Nerfgun3/bad_prompt/resolve/main/bad_prompt.pt',
     'https://huggingface.co/datasets/Nerfgun3/bad_prompt/blob/main/bad_prompt_version2.pt',
-    'https://huggingface.co/embed/EasyNegative/resolve/main/EasyNegative.safetensors',
     'https://huggingface.co/embed/negative/resolve/main/EasyNegativeV2.safetensors',
     'https://huggingface.co/embed/negative/resolve/main/bad-hands-5.pt',
-    'https://huggingface.co/embed/negative/resolve/main/bad-artist.pt',
-    'https://huggingface.co/embed/negative/resolve/main/ng_deepnegative_v1_75t.pt',
-    'https://huggingface.co/embed/negative/resolve/main/bad-artist-anime.pt',
-    'https://huggingface.co/embed/negative/resolve/main/bad-image-v2-39000.pt',
-    'https://huggingface.co/embed/negative/resolve/main/verybadimagenegative_v1.3.pt',
     ]
 
 for url_embed in download_embeds:
@@ -299,21 +308,51 @@ warnings.filterwarnings(action="ignore", category=FutureWarning, module="transfo
 from stablepy import logger
 logger.setLevel(logging.DEBUG)
 
-
 class GuiSD:
-    def __init__(self):
+    def __init__(self, stream=True):
         self.model = None
-
-    @spaces.GPU
-    def infer_short(self, model, pipe_params):
-        images, image_list = model(**pipe_params)
-        return images
+    
+        print("Loading model...")
+        self.model = Model_Diffusers(
+            base_model_id="cagliostrolab/animagine-xl-3.1",
+            task_name="txt2img",
+            vae_model=None,
+            type_model_precision=torch.float16,
+            retain_task_model_in_cache=False,
+        )
 
     @spaces.GPU(duration=120)
     def infer(self, model, pipe_params):
         images, image_list = model(**pipe_params)
         return images
 
+    def load_new_model(self, model_name, vae_model, task, progress=gr.Progress(track_tqdm=True)):
+
+        yield f"Loading model: {model_name}"
+        
+        vae_model = vae_model if vae_model != "None" else None
+
+
+        if model_name in model_list:
+            model_is_xl = "xl" in model_name.lower()
+            sdxl_in_vae = vae_model and "sdxl" in vae_model.lower()
+            model_type = "SDXL" if model_is_xl else "SD 1.5"
+            incompatible_vae = (model_is_xl and vae_model and not sdxl_in_vae) or (not model_is_xl and sdxl_in_vae)
+
+            if incompatible_vae:
+                vae_model = None
+
+        
+        self.model.load_pipe(
+            model_name,
+            task_name=task_stablepy[task],
+            vae_model=vae_model if vae_model != "None" else None,
+            type_model_precision=torch.float16,
+            retain_task_model_in_cache=False,
+        )
+        yield f"Model loaded: {model_name} {vae_model if vae_model else ''}"
+        
+    @spaces.GPU
     def generate_pipeline(
         self,
         prompt,
@@ -406,8 +445,23 @@ class GuiSD:
         mask_dilation_b,
         mask_blur_b,
         mask_padding_b,
+        retain_task_cache_gui,
+        image_ip1,
+        mask_ip1,
+        model_ip1,
+        mode_ip1,
+        scale_ip1,
+        image_ip2,
+        mask_ip2,
+        model_ip2,
+        mode_ip2,
+        scale_ip2,
+        # progress=gr.Progress(track_tqdm=True),
+        # progress=gr.Progress()
     ):
 
+        # progress(0.01, desc="Loading model...")
+        
         vae_model = vae_model if vae_model != "None" else None
         loras_list = [lora1, lora2, lora3, lora4, lora5]
 
@@ -427,23 +481,45 @@ class GuiSD:
 
             for la in loras_list:
                 if la is not None and la != "None":
-                    lora_type = "animetarot" in la.lower()
+                    print(la)
+                    lora_type = ("animetarot" in la.lower() or "Hyper-SD15-8steps".lower() in la.lower())
                     if (model_is_xl and lora_type) or (not model_is_xl and not lora_type):
                         gr.Info(f"The LoRA {la} is for { 'SD 1.5' if model_is_xl else 'SDXL' }, but you are using { model_type }.")
 
         task = task_stablepy[task]
 
+        params_ip_img = []
+        params_ip_msk = []
+        params_ip_model = []
+        params_ip_mode = []
+        params_ip_scale = []
+
+        all_adapters = [
+            (image_ip1, mask_ip1, model_ip1, mode_ip1, scale_ip1),
+            (image_ip2, mask_ip2, model_ip2, mode_ip2, scale_ip2),
+        ]
+
+        for imgip, mskip, modelip, modeip, scaleip in all_adapters:
+            if imgip:
+                params_ip_img.append(imgip)
+                if mskip:
+                    params_ip_msk.append(mskip)
+                params_ip_model.append(modelip)
+                params_ip_mode.append(modeip)
+                params_ip_scale.append(scaleip)
+
         # First load
         model_precision = torch.float16
         if not self.model:
-            from stablepy import Model_Diffusers
+            from modelstream import Model_Diffusers2
 
             print("Loading model...")
-            self.model = Model_Diffusers(
+            self.model = Model_Diffusers2(
                 base_model_id=model_name,
                 task_name=task,
                 vae_model=vae_model if vae_model != "None" else None,
-                type_model_precision=model_precision
+                type_model_precision=model_precision,
+                retain_task_model_in_cache=retain_task_cache_gui,
             )
 
         if task != "txt2img" and not image_control:
@@ -473,7 +549,8 @@ class GuiSD:
             model_name,
             task_name=task,
             vae_model=vae_model if vae_model != "None" else None,
-            type_model_precision=model_precision
+            type_model_precision=model_precision,
+            retain_task_model_in_cache=retain_task_cache_gui,
         )
 
         if textual_inversion and self.model.class_name == "StableDiffusionXLPipeline":
@@ -575,27 +652,30 @@ class GuiSD:
             "hires_negative_prompt": hires_negative_prompt,
             "hires_sampler": hires_sampler,
             "hires_before_adetailer": hires_before_adetailer,
-            "hires_after_adetailer": hires_after_adetailer
+            "hires_after_adetailer": hires_after_adetailer,
+            "ip_adapter_image": params_ip_img,
+            "ip_adapter_mask": params_ip_msk,
+            "ip_adapter_model": params_ip_model,
+            "ip_adapter_mode": params_ip_mode,
+            "ip_adapter_scale": params_ip_scale,
         }
 
         # print(pipe_params)
 
-        if (
-            (img_height > 1700 and img_width > 1700)
-            or (num_images > 1 and img_height>1048 and img_width>1048)
-            or (num_images > 1 and upscaler_model)
-            or (num_images > 1 and adetailer_active_a or num_images > 1 and adetailer_active_b)
-            or (num_images > 1 and steps>50)
-            or (adetailer_active_a and adetailer_active_b)
-            or (upscaler_model and upscaler_increases_size > 1.7)
-            or (steps > 75)
-            or (image_resolution > 1048)
-        ):
-            print("Inference 2")
-            return self.infer(self.model, pipe_params)
+        random_number = random.randint(1, 100)
+        if random_number < 25 and num_images < 3:
+            if not upscaler_model and steps < 45 and task in ["txt2img", "img2img"] and not adetailer_active_a and not adetailer_active_b:
+                num_images *=2
+                pipe_params["num_images"] = num_images
+                gr.Info("Num images x 2 🎉")
 
-        print("Inference 1")
-        return self.infer_short(self.model, pipe_params)
+        # print("Inference 1")
+        # yield self.infer_short(self.model, pipe_params)
+        for img, seed, data in self.model(**pipe_params):
+            info_state = f"PROCESSING..."
+            if data:
+                info_state = f"COMPLETE: seeds={str(seed)}"
+            yield img, info_state
 
 
 sd_gen = GuiSD()
@@ -605,11 +685,8 @@ CSS ="""
 #component-0 { height: 100%; }
 #gallery { flex-grow: 1; }
 """
-
-sdxl_task = task_model_list[:3] + task_model_list[3:8]
-sd_task = task_model_list[:3] + task_model_list[8:]
-
-
+sdxl_task = [k for k, v in task_stablepy.items() if v in SDXL_TASKS ]
+sd_task = [k for k, v in task_stablepy.items() if v in SD15_TASKS ]
 def update_task_options(model_name, task_name):
     if model_name in model_list:
         if "xl" in model_name.lower():
@@ -641,14 +718,20 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 model_name_gui = gr.Dropdown(label="Model", choices=model_list, value=model_list[0], allow_custom_value=True)
                 prompt_gui = gr.Textbox(lines=5, placeholder="Enter prompt", label="Prompt")
                 neg_prompt_gui = gr.Textbox(lines=3, placeholder="Enter Neg prompt", label="Negative prompt")
+                with gr.Row(equal_height=False):
+                    set_params_gui = gr.Button(value="↙️")
+                    clear_prompt_gui = gr.Button(value="🗑️")
+                    set_random_seed = gr.Button(value="🎲")
                 generate_button = gr.Button(value="GENERATE", variant="primary")
-
+                
                 model_name_gui.change(
                     update_task_options,
                     [model_name_gui, task_gui],
                     [task_gui],
                 )
 
+                load_model_gui = gr.HTML()
+                
                 result_images = gr.Gallery(
                     label="Generated images",
                     show_label=False,
@@ -662,20 +745,147 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     selected_index=50,
                 )
 
+                actual_task_info = gr.HTML()
+            
             with gr.Column(scale=1):
                 steps_gui = gr.Slider(minimum=1, maximum=100, step=1, value=30, label="Steps")
                 cfg_gui = gr.Slider(minimum=0, maximum=30, step=0.5, value=7.5, label="CFG")
                 sampler_gui = gr.Dropdown(label="Sampler", choices=scheduler_names, value="Euler a")
                 img_width_gui = gr.Slider(minimum=64, maximum=4096, step=8, value=1024, label="Img Width")
                 img_height_gui = gr.Slider(minimum=64, maximum=4096, step=8, value=1024, label="Img Height")
-                clip_skip_gui = gr.Checkbox(value=True, label="Layer 2 Clip Skip")
-                free_u_gui = gr.Checkbox(value=True, label="FreeU")
                 seed_gui = gr.Number(minimum=-1, maximum=9999999999, value=-1, label="Seed")
+                with gr.Row():
+                    clip_skip_gui = gr.Checkbox(value=True, label="Layer 2 Clip Skip")
+                    free_u_gui = gr.Checkbox(value=True, label="FreeU")
+
+                with gr.Row(equal_height=False):
+                    
+
+
+                    def run_set_params_gui(base_prompt):
+                        valid_receptors = {  # default values
+                            "prompt": gr.update(value=base_prompt),
+                            "neg_prompt": gr.update(value=""),
+                            "Steps": gr.update(value=30),
+                            "width": gr.update(value=1024),
+                            "height": gr.update(value=1024),
+                            "Seed": gr.update(value=-1),
+                            "Sampler": gr.update(value="Euler a"),
+                            "scale": gr.update(value=7.5), # cfg
+                            "skip": gr.update(value=True),
+                        }
+                        valid_keys = list(valid_receptors.keys())
+
+                        parameters = extract_parameters(base_prompt)
+                        for key, val in parameters.items():
+                            # print(val)
+                            if key in valid_keys:
+                                if key == "Sampler":
+                                  if val not in scheduler_names:
+                                      continue
+                                elif key == "skip":
+                                  if int(val) >= 2:
+                                    val = True
+                                if key == "prompt":
+                                  if ">" in val and "<" in val:
+                                    val = re.sub(r'<[^>]+>', '', val)
+                                    print("Removed LoRA written in the prompt")
+                                if key in ["prompt", "neg_prompt"]:
+                                    val = val.strip()
+                                if key in ["Steps", "width", "height", "Seed"]:
+                                    val = int(val)
+                                if key == "scale":
+                                    val = float(val)
+                                if key == "Seed":
+                                    continue
+                                valid_receptors[key] = gr.update(value=val)
+                                # print(val, type(val))
+                                # print(valid_receptors)
+                        return [value for value in valid_receptors.values()]
+
+                    set_params_gui.click(
+                        run_set_params_gui, [prompt_gui],[
+                            prompt_gui,
+                            neg_prompt_gui,
+                            steps_gui,
+                            img_width_gui,
+                            img_height_gui,
+                            seed_gui,
+                            sampler_gui,
+                            cfg_gui,
+                            clip_skip_gui,
+                        ],
+                    )
+                    
+                    
+                    def run_clear_prompt_gui():
+                        return gr.update(value=""), gr.update(value="")
+                    clear_prompt_gui.click(
+                        run_clear_prompt_gui, [], [prompt_gui, neg_prompt_gui]
+                    )
+
+                    def run_set_random_seed():
+                        return -1
+                    set_random_seed.click(
+                        run_set_random_seed, [], seed_gui
+                    )
+
                 num_images_gui = gr.Slider(minimum=1, maximum=4, step=1, value=1, label="Images")
-                prompt_s_options = [("Compel (default) format: (word)weight", "Compel"), ("Classic (sd1.5 long prompts) format: (word:weight)", "Classic")]
+                prompt_s_options = [
+                    ("Compel format: (word)weight", "Compel"),
+                    ("Classic format: (word:weight)", "Classic"),
+                    ("Classic-original format: (word:weight)", "Classic-original"),
+                    ("Classic-no_norm format: (word:weight)", "Classic-no_norm"),
+                    ("Classic-ignore", "Classic-ignore"),
+                    ("None", "None"),
+                ]
                 prompt_syntax_gui = gr.Dropdown(label="Prompt Syntax", choices=prompt_s_options, value=prompt_s_options[0][1])
                 vae_model_gui = gr.Dropdown(label="VAE Model", choices=vae_model_list)
-    
+
+                with gr.Accordion("Hires fix", open=False, visible=True):
+
+                    upscaler_keys = list(upscaler_dict_gui.keys())
+
+                    upscaler_model_path_gui = gr.Dropdown(label="Upscaler", choices=upscaler_keys, value=upscaler_keys[0])
+                    upscaler_increases_size_gui = gr.Slider(minimum=1.1, maximum=6., step=0.1, value=1.4, label="Upscale by")
+                    esrgan_tile_gui = gr.Slider(minimum=0, value=100, maximum=500, step=1, label="ESRGAN Tile")
+                    esrgan_tile_overlap_gui = gr.Slider(minimum=1, maximum=200, step=1, value=10, label="ESRGAN Tile Overlap")
+                    hires_steps_gui = gr.Slider(minimum=0, value=30, maximum=100, step=1, label="Hires Steps")
+                    hires_denoising_strength_gui = gr.Slider(minimum=0.1, maximum=1.0, step=0.01, value=0.55, label="Hires Denoising Strength")
+                    hires_sampler_gui = gr.Dropdown(label="Hires Sampler", choices=["Use same sampler"] + scheduler_names[:-1], value="Use same sampler")
+                    hires_prompt_gui = gr.Textbox(label="Hires Prompt", placeholder="Main prompt will be use", lines=3)
+                    hires_negative_prompt_gui = gr.Textbox(label="Hires Negative Prompt", placeholder="Main negative prompt will be use", lines=3)
+
+                with gr.Accordion("LoRA", open=False, visible=True):
+                    lora1_gui = gr.Dropdown(label="Lora1", choices=lora_model_list)
+                    lora_scale_1_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 1")
+                    lora2_gui = gr.Dropdown(label="Lora2", choices=lora_model_list)
+                    lora_scale_2_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 2")
+                    lora3_gui = gr.Dropdown(label="Lora3", choices=lora_model_list)
+                    lora_scale_3_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 3")
+                    lora4_gui = gr.Dropdown(label="Lora4", choices=lora_model_list)
+                    lora_scale_4_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 4")
+                    lora5_gui = gr.Dropdown(label="Lora5", choices=lora_model_list)
+                    lora_scale_5_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 5")
+
+                with gr.Accordion("IP-Adapter", open=False, visible=True):##############
+
+                    IP_MODELS = sorted(list(set(IP_ADAPTERS_SD + IP_ADAPTERS_SDXL)))
+                    MODE_IP_OPTIONS = ["original", "style", "layout", "style+layout"]
+
+                    with gr.Accordion("IP-Adapter 1", open=False, visible=True):
+                        image_ip1 = gr.Image(label="IP Image", type="filepath")
+                        mask_ip1 = gr.Image(label="IP Mask", type="filepath")
+                        model_ip1 = gr.Dropdown(value="plus_face", label="Model", choices=IP_MODELS)
+                        mode_ip1 = gr.Dropdown(value="original", label="Mode", choices=MODE_IP_OPTIONS)
+                        scale_ip1 = gr.Slider(minimum=0., maximum=2., step=0.01, value=0.7, label="Scale")
+                    with gr.Accordion("IP-Adapter 2", open=False, visible=True):
+                        image_ip2 = gr.Image(label="IP Image", type="filepath")
+                        mask_ip2 = gr.Image(label="IP Mask (optional)", type="filepath")
+                        model_ip2 = gr.Dropdown(value="base", label="Model", choices=IP_MODELS)
+                        mode_ip2 = gr.Dropdown(value="style", label="Mode", choices=MODE_IP_OPTIONS)
+                        scale_ip2 = gr.Slider(minimum=0., maximum=2., step=0.01, value=0.7, label="Scale")
+
                 with gr.Accordion("ControlNet / Img2img / Inpaint", open=False, visible=True):
                     image_control = gr.Image(label="Image ControlNet/Inpaint/Img2img", type="filepath")
                     image_mask_gui = gr.Image(label="Image Mask", type="filepath")
@@ -685,7 +895,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     )
                     image_resolution_gui = gr.Slider(minimum=64, maximum=2048, step=64, value=1024, label="Image Resolution")
                     preprocessor_name_gui = gr.Dropdown(label="Preprocessor Name", choices=preprocessor_controlnet["canny"])
-    
+
                     def change_preprocessor_choices(task):
                         task = task_stablepy[task]
                         if task in preprocessor_controlnet.keys():
@@ -693,7 +903,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         else:
                             choices_task = preprocessor_controlnet["canny"]
                         return gr.update(choices=choices_task, value=choices_task[0])
-    
+
                     task_gui.change(
                         change_preprocessor_choices,
                         [task_gui],
@@ -713,25 +923,13 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     adapter_conditioning_scale_gui = gr.Slider(minimum=0, maximum=5., step=0.1, value=1, label="Adapter Conditioning Scale")
                     adapter_conditioning_factor_gui = gr.Slider(minimum=0, maximum=1., step=0.01, value=0.55, label="Adapter Conditioning Factor (%)")
 
-                with gr.Accordion("LoRA", open=False, visible=True):
-                    lora1_gui = gr.Dropdown(label="Lora1", choices=lora_model_list)
-                    lora_scale_1_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 1")
-                    lora2_gui = gr.Dropdown(label="Lora2", choices=lora_model_list)
-                    lora_scale_2_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 2")
-                    lora3_gui = gr.Dropdown(label="Lora3", choices=lora_model_list)
-                    lora_scale_3_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 3")
-                    lora4_gui = gr.Dropdown(label="Lora4", choices=lora_model_list)
-                    lora_scale_4_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 4")
-                    lora5_gui = gr.Dropdown(label="Lora5", choices=lora_model_list)
-                    lora_scale_5_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 5")
-    
                 with gr.Accordion("Styles", open=False, visible=True):
-                    
+
                     try:
                         style_names_found = sd_gen.model.STYLE_NAMES
                     except:
                         style_names_found = STYLE_NAMES
-                        
+
                     style_prompt_gui = gr.Dropdown(
                         style_names_found,
                         multiselect=True,
@@ -746,42 +944,28 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         if not sd_gen.model:
                             gr.Info("First load the model")
                             return gr.update(value=None, choices=STYLE_NAMES)
-                        
+
                         sd_gen.model.load_style_file(json)
                         gr.Info(f"{len(sd_gen.model.STYLE_NAMES)} styles loaded")
                         return gr.update(value=None, choices=sd_gen.model.STYLE_NAMES)
 
                     style_button.click(load_json_style_file, [style_json_gui], [style_prompt_gui])                        
-    
+
                 with gr.Accordion("Textual inversion", open=False, visible=False):
                     active_textual_inversion_gui = gr.Checkbox(value=False, label="Active Textual Inversion in prompt")
 
-                with gr.Accordion("Hires fix", open=False, visible=True):
-
-                    upscaler_keys = list(upscaler_dict_gui.keys())
-
-                    upscaler_model_path_gui = gr.Dropdown(label="Upscaler", choices=upscaler_keys, value=upscaler_keys[0])
-                    upscaler_increases_size_gui = gr.Slider(minimum=1.1, maximum=6., step=0.1, value=1.5, label="Upscale by")
-                    esrgan_tile_gui = gr.Slider(minimum=0, value=100, maximum=500, step=1, label="ESRGAN Tile")
-                    esrgan_tile_overlap_gui = gr.Slider(minimum=1, maximum=200, step=1, value=10, label="ESRGAN Tile Overlap")
-                    hires_steps_gui = gr.Slider(minimum=0, value=30, maximum=100, step=1, label="Hires Steps")
-                    hires_denoising_strength_gui = gr.Slider(minimum=0.1, maximum=1.0, step=0.01, value=0.55, label="Hires Denoising Strength")
-                    hires_sampler_gui = gr.Dropdown(label="Hires Sampler", choices=["Use same sampler"] + scheduler_names[:-1], value="Use same sampler")
-                    hires_prompt_gui = gr.Textbox(label="Hires Prompt", placeholder="Main prompt will be use", lines=3)
-                    hires_negative_prompt_gui = gr.Textbox(label="Hires Negative Prompt", placeholder="Main negative prompt will be use", lines=3)
-    
                 with gr.Accordion("Detailfix", open=False, visible=True):
 
                     # Adetailer Inpaint Only
                     adetailer_inpaint_only_gui = gr.Checkbox(label="Inpaint only", value=True)
-    
+
                     # Adetailer Verbose
                     adetailer_verbose_gui = gr.Checkbox(label="Verbose", value=False)
-    
+
                     # Adetailer Sampler
                     adetailer_sampler_options = ["Use same sampler"] + scheduler_names[:-1]
                     adetailer_sampler_gui = gr.Dropdown(label="Adetailer sampler:", choices=adetailer_sampler_options, value="Use same sampler")
-    
+
                     with gr.Accordion("Detailfix A", open=False, visible=True):
                         # Adetailer A
                         adetailer_active_a_gui = gr.Checkbox(label="Enable Adetailer A", value=False)
@@ -794,7 +978,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         mask_dilation_a_gui = gr.Number(label="Mask dilation:", value=4, minimum=1)
                         mask_blur_a_gui = gr.Number(label="Mask blur:", value=4, minimum=1)
                         mask_padding_a_gui = gr.Number(label="Mask padding:", value=32, minimum=1)
-    
+
                     with gr.Accordion("Detailfix B", open=False, visible=True):
                         # Adetailer B
                         adetailer_active_b_gui = gr.Checkbox(label="Enable Adetailer B", value=False)
@@ -809,16 +993,17 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         mask_padding_b_gui = gr.Number(label="Mask padding:", value=32, minimum=1)
 
                 with gr.Accordion("Other settings", open=False, visible=True):
+                    image_previews_gui = gr.Checkbox(value=True, label="Image Previews")
                     hires_before_adetailer_gui = gr.Checkbox(value=False, label="Hires Before Adetailer")
                     hires_after_adetailer_gui = gr.Checkbox(value=True, label="Hires After Adetailer")
                     generator_in_cpu_gui = gr.Checkbox(value=False, label="Generator in CPU")
 
                 with gr.Accordion("More settings", open=False, visible=False):
                     loop_generation_gui = gr.Slider(minimum=1, value=1, label="Loop Generation")
+                    retain_task_cache_gui = gr.Checkbox(value=False, label="Retain task model in cache")
                     leave_progress_bar_gui = gr.Checkbox(value=True, label="Leave Progress Bar")
                     disable_progress_bar_gui = gr.Checkbox(value=False, label="Disable Progress Bar")
-                    image_previews_gui = gr.Checkbox(value=False, label="Image Previews")
-                    display_images_gui = gr.Checkbox(value=False, label="Display Images")
+                    display_images_gui = gr.Checkbox(value=True, label="Display Images")
                     save_generated_images_gui = gr.Checkbox(value=False, label="Save Generated Images")
                     image_storage_location_gui = gr.Textbox(value="./images", label="Image Storage Location")
                     retain_compel_previous_load_gui = gr.Checkbox(value=False, label="Retain Compel Previous Load")
@@ -938,7 +1123,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         1024,
                         "misri/epicrealismXL_v7FinalDestination",
                         None, # vae
-                        "sdxl_canny T2I Adapter",
+                        "canny ControlNet",
                         "image.webp", # img conttol
                         "Canny", # preprocessor
                         1024, # preproc resolution
@@ -1067,7 +1252,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         512,
                         "digiplay/majicMIX_realistic_v7",
                         None, # vae
-                        "sd_canny ControlNet",
+                        "openpose ControlNet",
                         "image.webp", # img conttol
                         "Canny", # preprocessor
                         512, # preproc resolution
@@ -1176,7 +1361,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     brush=gr.Brush(
                       default_size="16", # or leave it as 'auto'
                       color_mode="fixed", # 'fixed' hides the user swatches and colorpicker, 'defaults' shows it
-                      #default_color="black", # html names are supported
+                      # default_color="black", # html names are supported
                       colors=[
                         "rgba(0, 0, 0, 1)", # rgb(a)
                         "rgba(0, 0, 0, 0.1)",
@@ -1200,6 +1385,16 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             btn_send.click(send_img, [img_source, img_result], [image_control, image_mask_gui])
             
     generate_button.click(
+        fn=sd_gen.load_new_model,
+        inputs=[
+            model_name_gui,
+            vae_model_gui,
+            task_gui
+        ],
+        outputs=[load_model_gui],
+        queue=True,
+        show_progress="minimal",
+    ).success(
         fn=sd_gen.generate_pipeline,
         inputs=[
             prompt_gui,
@@ -1292,9 +1487,21 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             mask_dilation_b_gui,
             mask_blur_b_gui,
             mask_padding_b_gui,
+            retain_task_cache_gui,
+            image_ip1,
+            mask_ip1,
+            model_ip1,
+            mode_ip1,
+            scale_ip1,
+            image_ip2,
+            mask_ip2,
+            model_ip2,
+            mode_ip2,
+            scale_ip2,
         ],
-        outputs=[result_images],
+        outputs=[result_images, actual_task_info],
         queue=True,
+        show_progress="minimal",
     )
 
 app.queue()
