@@ -1,6 +1,3 @@
-#######################
-# UTILS
-#######################
 import spaces
 import os
 from stablepy import Model_Diffusers
@@ -25,6 +22,7 @@ from stablepy import (
     SD15_TASKS,
     SDXL_TASKS,
 )
+import urllib.parse
 
 preprocessor_controlnet = {
   "openpose": [
@@ -59,7 +57,7 @@ preprocessor_controlnet = {
   "lineart": [
     "Lineart",
     "Lineart coarse",
-    "LineartAnime",
+    "Lineart (anime)",
     "None",
     "None (anime)",
   ],
@@ -96,7 +94,7 @@ task_stablepy = {
     'depth ControlNet': 'depth',
     'normalbae ControlNet': 'normalbae',
     'lineart ControlNet': 'lineart',
-    'lineart_anime ControlNet': 'lineart_anime',
+    # 'lineart_anime ControlNet': 'lineart_anime',
     'shuffle ControlNet': 'shuffle',
     'ip2p ControlNet': 'ip2p',
     'optical pattern ControlNet': 'pattern',
@@ -108,7 +106,7 @@ task_model_list = list(task_stablepy.keys())
 
 def download_things(directory, url, hf_token="", civitai_api_key=""):
     url = url.strip()
-
+    
     if "drive.google.com" in url:
         original_dir = os.getcwd()
         os.chdir(directory)
@@ -116,6 +114,7 @@ def download_things(directory, url, hf_token="", civitai_api_key=""):
         os.chdir(original_dir)
     elif "huggingface.co" in url:
         url = url.replace("?download=true", "")
+        # url = urllib.parse.quote(url, safe=':/')  # fix encoding
         if "/blob/" in url:
             url = url.replace("/blob/", "/resolve/")
         user_header = f'"Authorization: Bearer {hf_token}"'
@@ -169,24 +168,43 @@ directory_vaes = 'vaes'
 os.makedirs(directory_vaes, exist_ok=True)
 
 # - **Download SD 1.5 Models**
-download_model = "https://huggingface.co/frankjoshua/toonyou_beta6/resolve/main/toonyou_beta6.safetensors"
+download_model = "https://civitai.com/api/download/models/574369, https://huggingface.co/TechnoByte/MilkyWonderland/resolve/main/milkyWonderland_v40.safetensors"
 # - **Download VAEs**
-download_vae = "https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/resolve/main/sdxl.vae.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-c-1.1-b-0.5.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-blessed.safetensors?download=true, https://huggingface.co/digiplay/VAE/resolve/main/vividReal_v20.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true"
+download_vae = "https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-c-1.1-b-0.5.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-blessed.safetensors?download=true, https://huggingface.co/digiplay/VAE/resolve/main/vividReal_v20.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true"
 # - **Download LoRAs**
-download_lora = "https://civitai.com/api/download/models/135867, https://civitai.com/api/download/models/135931, https://civitai.com/api/download/models/177492, https://civitai.com/api/download/models/145907, https://huggingface.co/Linaqruf/anime-detailer-xl-lora/resolve/main/anime-detailer-xl.safetensors?download=true, https://huggingface.co/Linaqruf/style-enhancer-xl-lora/resolve/main/style-enhancer-xl.safetensors?download=true, https://civitai.com/api/download/models/28609, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SD15-8steps-CFG-lora.safetensors?download=true, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SDXL-8steps-CFG-lora.safetensors?download=true"
+download_lora = "https://civitai.com/api/download/models/311558, https://huggingface.co/Leopain/color/resolve/main/Coloring_book_-_LineArt.safetensors, https://civitai.com/api/download/models/135867, https://civitai.com/api/download/models/145907, https://huggingface.co/Linaqruf/anime-detailer-xl-lora/resolve/main/anime-detailer-xl.safetensors?download=true, https://huggingface.co/Linaqruf/style-enhancer-xl-lora/resolve/main/style-enhancer-xl.safetensors?download=true, https://civitai.com/api/download/models/28609, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SD15-8steps-CFG-lora.safetensors?download=true, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SDXL-8steps-CFG-lora.safetensors?download=true"
 load_diffusers_format_model = [
     'stabilityai/stable-diffusion-xl-base-1.0',
+    'cagliostrolab/animagine-xl-3.1',
     'misri/epicrealismXL_v7FinalDestination',
     'misri/juggernautXL_juggernautX',
-    'misri/anima_pencil-XL-v4.0.0',
-    'cagliostrolab/animagine-xl-3.1',
-    'misri/kohakuXLEpsilon_rev1',
+    'misri/zavychromaxl_v80',
+    'SG161222/RealVisXL_V4.0',
+    'misri/newrealityxlAllInOne_Newreality40',
+    'eienmojiki/Anything-XL',
+    'eienmojiki/Starry-XL-v5.2',
+    'gsdf/CounterfeitXL',
     'kitty7779/ponyDiffusionV6XL',
+    'John6666/ebara-mfcg-pony-mix-v12-sdxl',
+    'John6666/t-ponynai3-v51-sdxl',
+    'yodayo-ai/kivotos-xl-2.0',
+    'yodayo-ai/holodayo-xl-2.1',
+    'digiplay/majicMIX_sombre_v2',
     'digiplay/majicMIX_realistic_v6',
     'digiplay/majicMIX_realistic_v7',
     'digiplay/DreamShaper_8',
     'digiplay/BeautifulArt_v1',
     'digiplay/DarkSushi2.5D_v1',
+    'digiplay/darkphoenix3D_v1.1',
+    'digiplay/BeenYouLiteL11_diffusers',
+    'rubbrband/revAnimated_v2Rebirth',
+    'youknownothing/cyberrealistic_v50',
+    'votepurchase/counterfeitV30_v30',
+    'Meina/MeinaMix_V11',
+    'Meina/MeinaUnreal_V5',
+    'Meina/MeinaPastel_V7',
+    'rubbrband/realcartoon3d_v16',
+    'rubbrband/realcartoonRealistic_v14',
 ]
 
 CIVITAI_API_KEY = os.environ.get("CIVITAI_API_KEY")
@@ -224,6 +242,25 @@ lora_model_list = get_model_list(directory_loras)
 lora_model_list.insert(0, "None")
 vae_model_list = get_model_list(directory_vaes)
 vae_model_list.insert(0, "None")
+
+def get_my_lora(link_url):
+    for url in [url.strip() for url in link_url.split(',')]:
+        if not os.path.exists(f"./loras/{url.split('/')[-1]}"):
+            download_things(directory_loras, url, hf_token, CIVITAI_API_KEY)
+    new_lora_model_list = get_model_list(directory_loras)
+    new_lora_model_list.insert(0, "None")
+    
+    return gr.update(
+        choices=new_lora_model_list
+    ), gr.update(
+        choices=new_lora_model_list
+    ), gr.update(
+        choices=new_lora_model_list
+    ), gr.update(
+        choices=new_lora_model_list
+    ), gr.update(
+        choices=new_lora_model_list
+    ),
 
 print('\033[33m🏁 Download and listing of valid models completed.\033[0m')
 
@@ -308,6 +345,17 @@ warnings.filterwarnings(action="ignore", category=FutureWarning, module="transfo
 from stablepy import logger
 logger.setLevel(logging.DEBUG)
 
+def info_html(json_data, title, subtitle):
+    return f"""
+        <div style='padding: 0; border-radius: 10px;'>
+            <p style='margin: 0; font-weight: bold;'>{title}</p>
+            <details>
+                <summary>Details</summary>
+                <p style='margin: 0; font-weight: bold;'>{subtitle}</p>
+            </details>
+        </div>
+        """
+
 class GuiSD:
     def __init__(self, stream=True):
         self.model = None
@@ -321,17 +369,11 @@ class GuiSD:
             retain_task_model_in_cache=False,
         )
 
-    @spaces.GPU(duration=120)
-    def infer(self, model, pipe_params):
-        images, image_list = model(**pipe_params)
-        return images
-
     def load_new_model(self, model_name, vae_model, task, progress=gr.Progress(track_tqdm=True)):
 
         yield f"Loading model: {model_name}"
         
         vae_model = vae_model if vae_model != "None" else None
-
 
         if model_name in model_list:
             model_is_xl = "xl" in model_name.lower()
@@ -350,7 +392,7 @@ class GuiSD:
             type_model_precision=torch.float16,
             retain_task_model_in_cache=False,
         )
-        yield f"Model loaded: {model_name} {vae_model if vae_model else ''}"
+        yield f"Model loaded: {model_name}"
         
     @spaces.GPU
     def generate_pipeline(
@@ -456,15 +498,14 @@ class GuiSD:
         model_ip2,
         mode_ip2,
         scale_ip2,
-        # progress=gr.Progress(track_tqdm=True),
-        # progress=gr.Progress()
     ):
-
-        # progress(0.01, desc="Loading model...")
         
         vae_model = vae_model if vae_model != "None" else None
         loras_list = [lora1, lora2, lora3, lora4, lora5]
+        vae_msg = f"VAE: {vae_model}" if vae_model else ""
+        msg_lora = []
 
+        
         if model_name in model_list:
             model_is_xl = "xl" in model_name.lower()
             sdxl_in_vae = vae_model and "sdxl" in vae_model.lower()
@@ -472,19 +513,23 @@ class GuiSD:
             incompatible_vae = (model_is_xl and vae_model and not sdxl_in_vae) or (not model_is_xl and sdxl_in_vae)
 
             if incompatible_vae:
-                gr.Info(
+                msg_inc_vae = (
                     f"The selected VAE is for a { 'SD 1.5' if model_is_xl else 'SDXL' } model, but you"
                     f" are using a { model_type } model. The default VAE "
                     "will be used."
                 )
+                gr.Info(msg_inc_vae)
+                vae_msg = msg_inc_vae
                 vae_model = None
 
             for la in loras_list:
-                if la is not None and la != "None":
+                if la is not None and la != "None" and la in lora_model_list:
                     print(la)
                     lora_type = ("animetarot" in la.lower() or "Hyper-SD15-8steps".lower() in la.lower())
                     if (model_is_xl and lora_type) or (not model_is_xl and not lora_type):
-                        gr.Info(f"The LoRA {la} is for { 'SD 1.5' if model_is_xl else 'SDXL' }, but you are using { model_type }.")
+                        msg_inc_lora = f"The LoRA {la} is for { 'SD 1.5' if model_is_xl else 'SDXL' }, but you are using { model_type }."
+                        gr.Info(msg_inc_lora)
+                        msg_lora.append(msg_inc_lora)
 
         task = task_stablepy[task]
 
@@ -669,12 +714,18 @@ class GuiSD:
                 pipe_params["num_images"] = num_images
                 gr.Info("Num images x 2 🎉")
 
-        # print("Inference 1")
-        # yield self.infer_short(self.model, pipe_params)
+        # Maybe fix lora issue: 'Cannot copy out of meta tensor; no data!''
+        self.model.pipe.to("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        info_state = f"PROCESSING "
         for img, seed, data in self.model(**pipe_params):
-            info_state = f"PROCESSING..."
+            info_state += ">"
             if data:
-                info_state = f"COMPLETE: seeds={str(seed)}"
+                info_state = f"COMPLETED. Seeds: {str(seed)}"
+                if vae_msg:
+                    info_state = info_state + "<br>" + vae_msg
+                if msg_lora:
+                    info_state = info_state + "<br>" + "<br>".join(msg_lora)
             yield img, info_state
 
 
@@ -868,6 +919,15 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     lora5_gui = gr.Dropdown(label="Lora5", choices=lora_model_list)
                     lora_scale_5_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 5")
 
+                    with gr.Accordion("From URL", open=False, visible=True):
+                        text_lora = gr.Textbox(label="URL", placeholder="http://...my_lora_url.safetensors", lines=1)
+                        button_lora = gr.Button("Get and update lists of LoRAs")
+                        button_lora.click(
+                            get_my_lora,
+                            [text_lora],
+                            [lora1_gui, lora2_gui, lora3_gui, lora4_gui, lora5_gui]
+                        )
+
                 with gr.Accordion("IP-Adapter", open=False, visible=True):##############
 
                     IP_MODELS = sorted(list(set(IP_ADAPTERS_SD + IP_ADAPTERS_SDXL)))
@@ -1011,7 +1071,26 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     retain_hires_model_previous_load_gui = gr.Checkbox(value=False, label="Retain Hires Model Previous Load")
                     xformers_memory_efficient_attention_gui = gr.Checkbox(value=False, label="Xformers Memory Efficient Attention")
 
-        with gr.Accordion("Examples", open=False, visible=True):
+        with gr.Accordion("Examples and help", open=False, visible=True):
+            gr.Markdown(
+                """### Help:
+                - The current space runs on a ZERO GPU which is assigned for approximately 60 seconds; Therefore, if you submit expensive tasks, the operation may be canceled upon reaching the maximum allowed time with 'GPU TASK ABORTED'.
+                - Distorted or strange images often result from high prompt weights, so it's best to use low weights and scales, and consider using Classic variants like 'Classic-original'.
+                - For better results with Pony Diffusion, try using sampler DPM++ 1s or DPM2 with Compel or Classic prompt weights.
+                """
+            )
+            gr.Markdown(
+                """### The following examples perform specific tasks:
+                1. Generation with SDXL and upscale
+                2. Generation with SDXL
+                3. ControlNet Canny SDXL
+                4. Optical pattern (Optical illusion) SDXL
+                5. Convert an image to a coloring drawing
+                6. ControlNet OpenPose SD 1.5
+
+                - Different tasks can be performed, such as img2img or using the IP adapter, to preserve a person's appearance or a specific style based on an image.
+                """
+            )
             gr.Examples(
                 examples=[
                     [
@@ -1022,7 +1101,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         7.5,
                         True,
                         -1,
-                        None,
+                        "None",
                         1.0,
                         None,
                         1.0,
@@ -1065,7 +1144,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         5.,
                         True,
                         -1,
-                        None,
+                        "None",
                         1.0,
                         None,
                         1.0,
@@ -1108,7 +1187,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         3.5,
                         True,
                         -1,
-                        None,
+                        "None",
                         1.0,
                         None,
                         1.0,
@@ -1144,14 +1223,14 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         None,
                     ],
                     [
-                        "masterpiece,high resolution,japanese town street background,fantasy world,magical,mountains forest background,stairs,(torii:1.2),masterpiece,cinematic,visual key,best quality,by hayao miyazaki,by makoto shinkai,soft dim lighting,pastel colors,night,stars",
-                        "(low quality, worst quality:1.4), (bad_prompt:0.8), (monochrome:1.1), (greyscale), painting, cartoon, comic, anime, manga, drawing, 2d, flat, crayon, sketch",
+                        "cinematic scenery old city ruins",
+                        "(worst quality, low quality, illustration, 3d, 2d, painting, cartoons, sketch), (illustration, 3d, 2d, painting, cartoons, sketch, blurry, film grain, noise), (low quality, worst quality:1.2)",
                         1,
                         50,
                         4.,
                         True,
                         -1,
-                        None,
+                        "None",
                         1.0,
                         None,
                         1.0,
@@ -1161,13 +1240,13 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         1.0,
                         None,
                         1.0,
-                        "DPM++ 2M Karras",
+                        "Euler a",
                         1024,
                         1024,
                         "misri/juggernautXL_juggernautX",
                         None, # vae
-                        "txt2img",
-                        None, # img conttol
+                        "optical pattern ControlNet",
+                        "spiral_no_transparent.png", # img conttol
                         "Canny", # preprocessor
                         512, # preproc resolution
                         1024, # img resolution
@@ -1180,21 +1259,21 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         0.1, # value mstd
                         0.1, # distance mstd
                         1.0, # cn scale
-                        0., # cn start
-                        1., # cn end
+                        0.05, # cn start
+                        0.75, # cn end
                         False, # ti
                         "Classic",
                         None,
                     ],
                     [
-                        "1girl, solo, black dress, black hair, black theme, dress, eyelashes, jewelry, makeup, parted lips, purple eyes, ring, short hair, silk, silver hair, snake, masterpiece, best quality",
-                        "(low quality, worst quality:1.4), (bad_prompt:0.8), (monochrome:1.1), (greyscale), painting, cartoon, comic, anime, manga, drawing, 2d, flat, crayon, sketch",
+                        "black and white, line art, coloring drawing, clean line art, black strokes, no background, white, black, free lines, black scribbles, on paper, A blend of comic book art and lineart full of black and white color, masterpiece, high-resolution, trending on Pixiv fan box, palette knife, brush strokes, two-dimensional, planar vector, T-shirt design, stickers, and T-shirt design, vector art, fantasy art, Adobe Illustrator, hand-painted, digital painting, low polygon, soft lighting, aerial view, isometric style, retro aesthetics, 8K resolution, black sketch lines, monochrome, invert color",
+                        "color, red, green, yellow, colored, duplicate, blurry, abstract, disfigured, deformed, animated, toy, figure, framed, 3d, bad art, poorly drawn, extra limbs, close up, b&w, weird colors, blurry, watermark, blur haze, 2 heads, long neck, watermark, elongated body, cropped image, out of frame, draft, deformed hands, twisted fingers, double image, malformed hands, multiple heads, extra limb, ugly, poorly drawn hands, missing limb, cut-off, over satured, grain, lowères, bad anatomy, poorly drawn face, mutation, mutated, floating limbs, disconnected limbs, out of focus, long body, disgusting, extra fingers, groos proportions, missing arms, mutated hands, cloned face, missing legs, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, grainy, signature, cut off, draft, deformed, blurry, bad anatomy, disfigured, poorly drawn face, mutation, bluelish, blue",
                         1,
-                        50,
+                        20,
                         4.,
                         True,
                         -1,
-                        None,
+                        "loras/Coloring_book_-_LineArt.safetensors",
                         1.0,
                         None,
                         1.0,
@@ -1204,16 +1283,16 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         1.0,
                         None,
                         1.0,
-                        "DPM++ 2M Karras",
-                        1344,
-                        896,
-                        "misri/anima_pencil-XL-v4.0.0",
+                        "DPM++ 2M SDE Karras",
+                        1024,
+                        1024,
+                        "cagliostrolab/animagine-xl-3.1",
                         None, # vae
-                        "txt2img",
-                        None, # img conttol
-                        "Canny", # preprocessor
+                        "lineart ControlNet",
+                        "color_image.png", # img conttol
+                        "Lineart", # preprocessor
                         512, # preproc resolution
-                        1024, # img resolution
+                        896, # img resolution
                         None, # Style prompt
                         None, # Style json
                         None, # img Mask
@@ -1226,7 +1305,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         0., # cn start
                         1., # cn end
                         False, # ti
-                        "Classic",
+                        "Compel",
                         None,
                     ],
                     [
@@ -1237,7 +1316,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         5.,
                         True,
                         -1,
-                        None,
+                        "None",
                         1.0,
                         None,
                         1.0,
@@ -1267,7 +1346,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         0.1, # distance mstd
                         1.0, # cn scale
                         0., # cn start
-                        1., # cn end
+                        0.9, # cn end
                         False, # ti
                         "Compel",
                         "Nearest",
