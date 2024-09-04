@@ -367,6 +367,7 @@ class GuiSD:
             vae_model=None,
             type_model_precision=torch.float16,
             retain_task_model_in_cache=False,
+            device="cpu",
         )
 
     def load_new_model(self, model_name, vae_model, task, progress=gr.Progress(track_tqdm=True)):
@@ -384,7 +385,8 @@ class GuiSD:
             if incompatible_vae:
                 vae_model = None
 
-        
+        self.model.device = torch.device("cpu")
+
         self.model.load_pipe(
             model_name,
             task_name=task_stablepy[task],
@@ -555,6 +557,7 @@ class GuiSD:
 
         # First load
         model_precision = torch.float16
+        self.model.device = torch.device("cuda:0")
         if not self.model:
             from modelstream import Model_Diffusers2
 
