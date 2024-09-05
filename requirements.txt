@@ -1,4 +1,4 @@
-git+https://github.com/R3gm/stablepy.git@test_stream
+git+https://github.com/R3gm/stablepy.git@dev2
 torch==2.2.0
 gdown
 opencv-python
