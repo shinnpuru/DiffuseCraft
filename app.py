@@ -569,7 +569,8 @@ class GuiSD:
                 type_model_precision=model_precision,
                 retain_task_model_in_cache=retain_task_cache_gui,
             )
-
+        self.model.stream_config(concurrency=5, latent_resize_by=1, vae_decoding=False)
+        
         if task != "txt2img" and not image_control:
             raise ValueError("No control image found: To use this function, you have to upload an image in 'Image ControlNet/Inpaint/Img2img'")
 
@@ -708,8 +709,6 @@ class GuiSD:
             "ip_adapter_scale": params_ip_scale,
         }
 
-        # print(pipe_params)
-
         random_number = random.randint(1, 100)
         if random_number < 25 and num_images < 3:
             if not upscaler_model and steps < 45 and task in ["txt2img", "img2img"] and not adetailer_active_a and not adetailer_active_b:
@@ -717,18 +716,18 @@ class GuiSD:
                 pipe_params["num_images"] = num_images
                 gr.Info("Num images x 2 🎉")
 
-        # Maybe fix lora issue: 'Cannot copy out of meta tensor; no data!''
-        self.model.pipe.to("cuda:0" if torch.cuda.is_available() else "cpu")
-
         info_state = f"PROCESSING "
-        for img, seed, data in self.model(**pipe_params):
+        for img, seed, image_path, metadata in self.model(**pipe_params):
             info_state += ">"
-            if data:
+            if image_path:
                 info_state = f"COMPLETED. Seeds: {str(seed)}"
                 if vae_msg:
                     info_state = info_state + "<br>" + vae_msg
                 if msg_lora:
                     info_state = info_state + "<br>" + "<br>".join(msg_lora)
+
+                info_state = info_state + "<br>" + "GENERATION DATA:<br>" + "<br>-------<br>".join(metadata).replace("\n", "<br>") 
+                
             yield img, info_state
 
 
