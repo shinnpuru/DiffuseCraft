@@ -66,14 +66,28 @@ preprocessor_controlnet = {
     "None",
   ],
   "canny": [
-    "Canny"
+    "Canny",
+    "None",
   ],
   "mlsd": [
-    "MLSD"
+    "MLSD",
+    "None",
   ],
   "ip2p": [
     "ip2p"
-  ]
+  ],
+  "recolor": [
+    "Recolor luminance",
+    "Recolor intensity",
+    "None",
+  ],
+  "tile": [
+    "Mild Blur",
+    "Moderate Blur",
+    "Heavy Blur",
+    "None",
+  ],
+
 }
 
 task_stablepy = {
@@ -94,11 +108,12 @@ task_stablepy = {
     'depth ControlNet': 'depth',
     'normalbae ControlNet': 'normalbae',
     'lineart ControlNet': 'lineart',
-    # 'lineart_anime ControlNet': 'lineart_anime',
+    'lineart_anime ControlNet': 'lineart_anime',
     'shuffle ControlNet': 'shuffle',
     'ip2p ControlNet': 'ip2p',
     'optical pattern ControlNet': 'pattern',
-    'tile realistic': 'sdxl_tile_realistic',
+    'recolor ControlNet': 'recolor',
+    'tile ControlNet': 'tile',
 }
 
 task_model_list = list(task_stablepy.keys())
@@ -106,7 +121,7 @@ task_model_list = list(task_stablepy.keys())
 
 def download_things(directory, url, hf_token="", civitai_api_key=""):
     url = url.strip()
-    
+
     if "drive.google.com" in url:
         original_dir = os.getcwd()
         os.chdir(directory)
@@ -121,7 +136,7 @@ def download_things(directory, url, hf_token="", civitai_api_key=""):
         if hf_token:
             os.system(f"aria2c --console-log-level=error --summary-interval=10 --header={user_header} -c -x 16 -k 1M -s 16 {url} -d {directory}  -o {url.split('/')[-1]}")
         else:
-            os.system (f"aria2c --optimize-concurrent-downloads --console-log-level=error --summary-interval=10 -c -x 16 -k 1M -s 16 {url} -d {directory}  -o {url.split('/')[-1]}")
+            os.system(f"aria2c --optimize-concurrent-downloads --console-log-level=error --summary-interval=10 -c -x 16 -k 1M -s 16 {url} -d {directory}  -o {url.split('/')[-1]}")
     elif "civitai.com" in url:
         if "?" in url:
             url = url.split("?")[0]
@@ -136,7 +151,7 @@ def download_things(directory, url, hf_token="", civitai_api_key=""):
 
 def get_model_list(directory_path):
     model_list = []
-    valid_extensions = {'.ckpt' , '.pt', '.pth', '.safetensors', '.bin'}
+    valid_extensions = {'.ckpt', '.pt', '.pth', '.safetensors', '.bin'}
 
     for filename in os.listdir(directory_path):
         if os.path.splitext(filename)[1] in valid_extensions:
@@ -146,18 +161,6 @@ def get_model_list(directory_path):
             model_list.append(file_path)
             print('\033[34mFILE: ' + file_path + '\033[0m')
     return model_list
-
-
-def process_string(input_string):
-    parts = input_string.split('/')
-
-    if len(parts) == 2:
-        first_element = parts[1]
-        complete_string = input_string
-        result = (first_element, complete_string)
-        return result
-    else:
-        return None
 
 
 directory_models = 'models'
@@ -172,23 +175,36 @@ download_model = "https://civitai.com/api/download/models/574369, https://huggin
 # - **Download VAEs**
 download_vae = "https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-c-1.1-b-0.5.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-blessed.safetensors?download=true, https://huggingface.co/digiplay/VAE/resolve/main/vividReal_v20.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true"
 # - **Download LoRAs**
-download_lora = "https://huggingface.co/Leopain/color/resolve/main/Coloring_book_-_LineArt.safetensors, https://civitai.com/api/download/models/135867, https://civitai.com/api/download/models/145907, https://huggingface.co/Linaqruf/anime-detailer-xl-lora/resolve/main/anime-detailer-xl.safetensors?download=true, https://huggingface.co/Linaqruf/style-enhancer-xl-lora/resolve/main/style-enhancer-xl.safetensors?download=true, https://civitai.com/api/download/models/28609, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SD15-8steps-CFG-lora.safetensors?download=true, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SDXL-8steps-CFG-lora.safetensors?download=true"
+download_lora = "https://civitai.com/api/download/models/28907, https://huggingface.co/Leopain/color/resolve/main/Coloring_book_-_LineArt.safetensors, https://civitai.com/api/download/models/135867, https://civitai.com/api/download/models/145907, https://huggingface.co/Linaqruf/anime-detailer-xl-lora/resolve/main/anime-detailer-xl.safetensors?download=true, https://huggingface.co/Linaqruf/style-enhancer-xl-lora/resolve/main/style-enhancer-xl.safetensors?download=true, https://civitai.com/api/download/models/28609, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SD15-8steps-CFG-lora.safetensors?download=true, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SDXL-8steps-CFG-lora.safetensors?download=true"
 load_diffusers_format_model = [
     'stabilityai/stable-diffusion-xl-base-1.0',
     'cagliostrolab/animagine-xl-3.1',
+    'John6666/epicrealism-xl-v8kiss-sdxl',
     'misri/epicrealismXL_v7FinalDestination',
     'misri/juggernautXL_juggernautX',
     'misri/zavychromaxl_v80',
     'SG161222/RealVisXL_V4.0',
+    'SG161222/RealVisXL_V5.0',
     'misri/newrealityxlAllInOne_Newreality40',
     'eienmojiki/Anything-XL',
     'eienmojiki/Starry-XL-v5.2',
     'gsdf/CounterfeitXL',
+    'KBlueLeaf/Kohaku-XL-Zeta',
     'kitty7779/ponyDiffusionV6XL',
+    'WhiteAiZ/autismmixSDXL_autismmixConfetti_diffusers',
+    'GraydientPlatformAPI/aniverse-pony',
+    'John6666/mistoon-anime-ponyalpha-sdxl',
     'John6666/ebara-mfcg-pony-mix-v12-sdxl',
     'John6666/t-ponynai3-v51-sdxl',
+    'John6666/mala-anime-mix-nsfw-pony-xl-v5-sdxl',
+    'John6666/wai-real-mix-v11-sdxl',
+    'John6666/cyberrealistic-pony-v63-sdxl',
+    'GraydientPlatformAPI/realcartoon-pony-diffusion',
+    'John6666/nova-anime-xl-pony-v5-sdxl',
     'yodayo-ai/kivotos-xl-2.0',
     'yodayo-ai/holodayo-xl-2.1',
+    'yodayo-ai/clandestine-xl-1.0',
+    'John6666/silvermoon-mix-01xl-v11-sdxl',
     'digiplay/majicMIX_sombre_v2',
     'digiplay/majicMIX_realistic_v6',
     'digiplay/majicMIX_realistic_v7',
@@ -197,14 +213,21 @@ load_diffusers_format_model = [
     'digiplay/DarkSushi2.5D_v1',
     'digiplay/darkphoenix3D_v1.1',
     'digiplay/BeenYouLiteL11_diffusers',
-    'rubbrband/revAnimated_v2Rebirth',
+    'Yntec/RevAnimatedV2Rebirth',
     'youknownothing/cyberrealistic_v50',
+    'youknownothing/deliberate-v6',
+    'GraydientPlatformAPI/deliberate-cyber3',
+    'GraydientPlatformAPI/picx-real',
+    'GraydientPlatformAPI/perfectworld6',
+    'emilianJR/epiCRealism',
     'votepurchase/counterfeitV30_v30',
+    'votepurchase/ChilloutMix',
     'Meina/MeinaMix_V11',
     'Meina/MeinaUnreal_V5',
     'Meina/MeinaPastel_V7',
-    'rubbrband/realcartoon3d_v16',
-    'rubbrband/realcartoonRealistic_v14',
+    'GraydientPlatformAPI/realcartoon3d-17',
+    'GraydientPlatformAPI/realcartoon-pixar11',
+    'GraydientPlatformAPI/realcartoon-real17',
 ]
 
 CIVITAI_API_KEY = os.environ.get("CIVITAI_API_KEY")
@@ -249,7 +272,7 @@ def get_my_lora(link_url):
             download_things(directory_loras, url, hf_token, CIVITAI_API_KEY)
     new_lora_model_list = get_model_list(directory_loras)
     new_lora_model_list.insert(0, "None")
-    
+
     return gr.update(
         choices=new_lora_model_list
     ), gr.update(
@@ -262,12 +285,19 @@ def get_my_lora(link_url):
         choices=new_lora_model_list
     ),
 
+
 print('\033[33m🏁 Download and listing of valid models completed.\033[0m')
 
 upscaler_dict_gui = {
-    None : None,
-    "Lanczos" : "Lanczos",
-    "Nearest" : "Nearest",
+    None: None,
+    "Lanczos": "Lanczos",
+    "Nearest": "Nearest",
+    'Latent': 'Latent',
+    'Latent (antialiased)': 'Latent (antialiased)',
+    'Latent (bicubic)': 'Latent (bicubic)',
+    'Latent (bicubic antialiased)': 'Latent (bicubic antialiased)',
+    'Latent (nearest)': 'Latent (nearest)',
+    'Latent (nearest-exact)': 'Latent (nearest-exact)',
     "RealESRGAN_x4plus" : "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
     "RealESRNet_x4plus" : "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.1/RealESRNet_x4plus.pth",
     "RealESRGAN_x4plus_anime_6B": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
@@ -284,6 +314,7 @@ upscaler_dict_gui = {
     "NickelbackFS4x" : "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/NickelbackFS%204x.pth"
 }
 
+upscaler_keys = list(upscaler_dict_gui.keys())
 
 def extract_parameters(input_string):
     parameters = {}
@@ -359,7 +390,7 @@ def info_html(json_data, title, subtitle):
 class GuiSD:
     def __init__(self, stream=True):
         self.model = None
-    
+
         print("Loading model...")
         self.model = Model_Diffusers(
             base_model_id="cagliostrolab/animagine-xl-3.1",
@@ -373,7 +404,7 @@ class GuiSD:
     def load_new_model(self, model_name, vae_model, task, progress=gr.Progress(track_tqdm=True)):
 
         yield f"Loading model: {model_name}"
-        
+
         vae_model = vae_model if vae_model != "None" else None
 
         if model_name in model_list:
@@ -395,7 +426,7 @@ class GuiSD:
             retain_task_model_in_cache=False,
         )
         yield f"Model loaded: {model_name}"
-        
+
     @spaces.GPU
     def generate_pipeline(
         self,
@@ -500,14 +531,14 @@ class GuiSD:
         model_ip2,
         mode_ip2,
         scale_ip2,
+        pag_scale,
     ):
-        
+
         vae_model = vae_model if vae_model != "None" else None
         loras_list = [lora1, lora2, lora3, lora4, lora5]
         vae_msg = f"VAE: {vae_model}" if vae_model else ""
         msg_lora = []
 
-        
         if model_name in model_list:
             model_is_xl = "xl" in model_name.lower()
             sdxl_in_vae = vae_model and "sdxl" in vae_model.lower()
@@ -570,14 +601,14 @@ class GuiSD:
                 retain_task_model_in_cache=retain_task_cache_gui,
             )
         self.model.stream_config(concurrency=5, latent_resize_by=1, vae_decoding=False)
-        
+
         if task != "txt2img" and not image_control:
             raise ValueError("No control image found: To use this function, you have to upload an image in 'Image ControlNet/Inpaint/Img2img'")
 
         if task == "inpaint" and not image_mask:
             raise ValueError("No mask image found: Specify one in 'Image Mask'")
 
-        if upscaler_model_path in [None, "Lanczos", "Nearest"]:
+        if upscaler_model_path in upscaler_keys[:9]:
             upscaler_model = upscaler_model_path
         else:
             directory_upscalers = 'upscalers'
@@ -641,6 +672,7 @@ class GuiSD:
             "num_steps": steps,
             "guidance_scale": cfg,
             "clip_skip": clip_skip,
+            "pag_scale": float(pag_scale),
             "seed": seed,
             "image": image_control,
             "preprocessor_name": preprocessor_name,
@@ -716,7 +748,7 @@ class GuiSD:
                 pipe_params["num_images"] = num_images
                 gr.Info("Num images x 2 🎉")
 
-        info_state = f"PROCESSING "
+        info_state = "PROCESSING "
         for img, seed, image_path, metadata in self.model(**pipe_params):
             info_state += ">"
             if image_path:
@@ -727,7 +759,7 @@ class GuiSD:
                     info_state = info_state + "<br>" + "<br>".join(msg_lora)
 
                 info_state = info_state + "<br>" + "GENERATION DATA:<br>" + "<br>-------<br>".join(metadata).replace("\n", "<br>") 
-                
+
             yield img, info_state
 
 
@@ -799,7 +831,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 )
 
                 actual_task_info = gr.HTML()
-            
+
             with gr.Column(scale=1):
                 steps_gui = gr.Slider(minimum=1, maximum=100, step=1, value=30, label="Steps")
                 cfg_gui = gr.Slider(minimum=0, maximum=30, step=0.5, value=7.5, label="CFG")
@@ -807,13 +839,12 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 img_width_gui = gr.Slider(minimum=64, maximum=4096, step=8, value=1024, label="Img Width")
                 img_height_gui = gr.Slider(minimum=64, maximum=4096, step=8, value=1024, label="Img Height")
                 seed_gui = gr.Number(minimum=-1, maximum=9999999999, value=-1, label="Seed")
+                pag_scale_gui = gr.Slider(minimum=0.0, maximum=10.0, step=0.1, value=0.0, label="PAG Scale")
                 with gr.Row():
                     clip_skip_gui = gr.Checkbox(value=True, label="Layer 2 Clip Skip")
                     free_u_gui = gr.Checkbox(value=True, label="FreeU")
 
                 with gr.Row(equal_height=False):
-                    
-
 
                     def run_set_params_gui(base_prompt):
                         valid_receptors = {  # default values
@@ -869,8 +900,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                             clip_skip_gui,
                         ],
                     )
-                    
-                    
+
                     def run_clear_prompt_gui():
                         return gr.update(value=""), gr.update(value="")
                     clear_prompt_gui.click(
@@ -896,8 +926,6 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 vae_model_gui = gr.Dropdown(label="VAE Model", choices=vae_model_list)
 
                 with gr.Accordion("Hires fix", open=False, visible=True):
-
-                    upscaler_keys = list(upscaler_dict_gui.keys())
 
                     upscaler_model_path_gui = gr.Dropdown(label="Upscaler", choices=upscaler_keys, value=upscaler_keys[0])
                     upscaler_increases_size_gui = gr.Slider(minimum=1.1, maximum=6., step=0.1, value=1.4, label="Upscale by")
@@ -1579,6 +1607,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             model_ip2,
             mode_ip2,
             scale_ip2,
+            pag_scale_gui,
         ],
         outputs=[result_images, actual_task_info],
         queue=True,
