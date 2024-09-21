@@ -314,11 +314,11 @@ upscaler_dict_gui = {
     "realesr-animevideov3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-animevideov3.pth",
     "realesr-general-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-x4v3.pth",
     "realesr-general-wdn-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-wdn-x4v3.pth",
-    "4x-UltraSharp" : "https://huggingface.co/Shandypur/ESRGAN-4x-UltraSharp/resolve/main/4x-UltraSharp.pth",
+    "4x-UltraSharp": "https://huggingface.co/Shandypur/ESRGAN-4x-UltraSharp/resolve/main/4x-UltraSharp.pth",
     "4x_foolhardy_Remacri": "https://huggingface.co/FacehugmanIII/4x_foolhardy_Remacri/resolve/main/4x_foolhardy_Remacri.pth",
     "Remacri4xExtraSmoother": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/Remacri%204x%20ExtraSmoother.pth",
     "AnimeSharp4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/AnimeSharp%204x.pth",
-    "lollypop" : "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/lollypop.pth",
+    "lollypop": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/lollypop.pth",
     "RealisticRescaler4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/RealisticRescaler%204x.pth",
     "NickelbackFS4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/NickelbackFS%204x.pth"
 }
@@ -750,13 +750,6 @@ class GuiSD:
             "ip_adapter_scale": params_ip_scale,
         }
 
-        random_number = random.randint(1, 100)
-        if random_number < 25 and num_images < 3:
-            if not upscaler_model and steps < 45 and task in ["txt2img", "img2img"] and not adetailer_active_a and not adetailer_active_b:
-                num_images *=2
-                pipe_params["num_images"] = num_images
-                gr.Info("Num images x 2 🎉")
-
         info_state = "PROCESSING "
         for img, seed, image_path, metadata in self.model(**pipe_params):
             info_state += ">"
@@ -775,7 +768,8 @@ class GuiSD:
                         for i, path in enumerate(image_path)
                     ]
                 )
-                info_state += f"<br>{download_links}"
+                if save_generated_images:
+                    info_state += f"<br>{download_links}"
 
             yield img, info_state
 
@@ -791,7 +785,7 @@ sdxl_task = [k for k, v in task_stablepy.items() if v in SDXL_TASKS ]
 sd_task = [k for k, v in task_stablepy.items() if v in SD15_TASKS ]
 def update_task_options(model_name, task_name):
     if model_name in model_list:
-        if "xl" in model_name.lower():
+        if "xl" in model_name.lower() or "pony" in model_name.lower():
             new_choices = sdxl_task
         else:
             new_choices = sd_task
@@ -803,6 +797,7 @@ def update_task_options(model_name, task_name):
     else:
         return gr.update(value=task_name, choices=task_model_list)
 
+POST_PROCESSING_SAMPLER = ["Use same sampler"] + scheduler_names[:-2]
 
 with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
     gr.Markdown("# 🧩 DiffuseCraft")
@@ -950,7 +945,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     esrgan_tile_overlap_gui = gr.Slider(minimum=1, maximum=200, step=1, value=10, label="ESRGAN Tile Overlap")
                     hires_steps_gui = gr.Slider(minimum=0, value=30, maximum=100, step=1, label="Hires Steps")
                     hires_denoising_strength_gui = gr.Slider(minimum=0.1, maximum=1.0, step=0.01, value=0.55, label="Hires Denoising Strength")
-                    hires_sampler_gui = gr.Dropdown(label="Hires Sampler", choices=["Use same sampler"] + scheduler_names[:-1], value="Use same sampler")
+                    hires_sampler_gui = gr.Dropdown(label="Hires Sampler", choices=POST_PROCESSING_SAMPLER, value=POST_PROCESSING_SAMPLER[0])
                     hires_prompt_gui = gr.Textbox(label="Hires Prompt", placeholder="Main prompt will be use", lines=3)
                     hires_negative_prompt_gui = gr.Textbox(label="Hires Negative Prompt", placeholder="Main negative prompt will be use", lines=3)
 
@@ -1077,8 +1072,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     adetailer_verbose_gui = gr.Checkbox(label="Verbose", value=False)
 
                     # Adetailer Sampler
-                    adetailer_sampler_options = ["Use same sampler"] + scheduler_names[:-1]
-                    adetailer_sampler_gui = gr.Dropdown(label="Adetailer sampler:", choices=adetailer_sampler_options, value="Use same sampler")
+                    adetailer_sampler_gui = gr.Dropdown(label="Adetailer sampler:", choices=POST_PROCESSING_SAMPLER, value=POST_PROCESSING_SAMPLER[0])
 
                     with gr.Accordion("Detailfix A", open=False, visible=True):
                         # Adetailer A
@@ -1107,7 +1101,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         mask_padding_b_gui = gr.Number(label="Mask padding:", value=32, minimum=1)
 
                 with gr.Accordion("Other settings", open=False, visible=True):
-                    image_previews_gui = gr.Checkbox(value=True, label="Image Previews")
+                    save_generated_images_gui = gr.Checkbox(value=True, label="Create a download link for the images")
                     hires_before_adetailer_gui = gr.Checkbox(value=False, label="Hires Before Adetailer")
                     hires_after_adetailer_gui = gr.Checkbox(value=True, label="Hires After Adetailer")
                     generator_in_cpu_gui = gr.Checkbox(value=False, label="Generator in CPU")
@@ -1118,7 +1112,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     leave_progress_bar_gui = gr.Checkbox(value=True, label="Leave Progress Bar")
                     disable_progress_bar_gui = gr.Checkbox(value=False, label="Disable Progress Bar")
                     display_images_gui = gr.Checkbox(value=True, label="Display Images")
-                    save_generated_images_gui = gr.Checkbox(value=True, label="Save Generated Images")
+                    image_previews_gui = gr.Checkbox(value=True, label="Image Previews")
                     image_storage_location_gui = gr.Textbox(value="./images", label="Image Storage Location")
                     retain_compel_previous_load_gui = gr.Checkbox(value=False, label="Retain Compel Previous Load")
                     retain_detailfix_model_previous_load_gui = gr.Checkbox(value=False, label="Retain Detailfix Model Previous Load")
@@ -1516,7 +1510,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             def send_img(img_source, img_result):
                 return img_source, img_result
             btn_send.click(send_img, [img_source, img_result], [image_control, image_mask_gui])
-            
+
     generate_button.click(
         fn=sd_gen.load_new_model,
         inputs=[
