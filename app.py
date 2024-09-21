@@ -61,6 +61,13 @@ preprocessor_controlnet = {
     "None",
     "None (anime)",
   ],
+  "lineart_anime": [
+    "Lineart",
+    "Lineart coarse",
+    "Lineart (anime)",
+    "None",
+    "None (anime)",
+  ],
   "shuffle": [
     "ContentShuffle",
     "None",
@@ -190,8 +197,9 @@ load_diffusers_format_model = [
     'eienmojiki/Starry-XL-v5.2',
     'gsdf/CounterfeitXL',
     'KBlueLeaf/Kohaku-XL-Zeta',
-    'kitty7779/ponyDiffusionV6XL',
+    'John6666/silvermoon-mix-01xl-v11-sdxl',
     'WhiteAiZ/autismmixSDXL_autismmixConfetti_diffusers',
+    'kitty7779/ponyDiffusionV6XL',
     'GraydientPlatformAPI/aniverse-pony',
     'John6666/mistoon-anime-ponyalpha-sdxl',
     'John6666/ebara-mfcg-pony-mix-v12-sdxl',
@@ -201,10 +209,10 @@ load_diffusers_format_model = [
     'John6666/cyberrealistic-pony-v63-sdxl',
     'GraydientPlatformAPI/realcartoon-pony-diffusion',
     'John6666/nova-anime-xl-pony-v5-sdxl',
+    'John6666/autismmix-sdxl-autismmix-pony-sdxl',
     'yodayo-ai/kivotos-xl-2.0',
     'yodayo-ai/holodayo-xl-2.1',
     'yodayo-ai/clandestine-xl-1.0',
-    'John6666/silvermoon-mix-01xl-v11-sdxl',
     'digiplay/majicMIX_sombre_v2',
     'digiplay/majicMIX_realistic_v6',
     'digiplay/majicMIX_realistic_v7',
@@ -266,6 +274,7 @@ lora_model_list.insert(0, "None")
 vae_model_list = get_model_list(directory_vaes)
 vae_model_list.insert(0, "None")
 
+
 def get_my_lora(link_url):
     for url in [url.strip() for url in link_url.split(',')]:
         if not os.path.exists(f"./loras/{url.split('/')[-1]}"):
@@ -298,20 +307,20 @@ upscaler_dict_gui = {
     'Latent (bicubic antialiased)': 'Latent (bicubic antialiased)',
     'Latent (nearest)': 'Latent (nearest)',
     'Latent (nearest-exact)': 'Latent (nearest-exact)',
-    "RealESRGAN_x4plus" : "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
-    "RealESRNet_x4plus" : "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.1/RealESRNet_x4plus.pth",
+    "RealESRGAN_x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
+    "RealESRNet_x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.1/RealESRNet_x4plus.pth",
     "RealESRGAN_x4plus_anime_6B": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
     "RealESRGAN_x2plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth",
     "realesr-animevideov3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-animevideov3.pth",
     "realesr-general-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-x4v3.pth",
-    "realesr-general-wdn-x4v3" : "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-wdn-x4v3.pth",
+    "realesr-general-wdn-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-wdn-x4v3.pth",
     "4x-UltraSharp" : "https://huggingface.co/Shandypur/ESRGAN-4x-UltraSharp/resolve/main/4x-UltraSharp.pth",
-    "4x_foolhardy_Remacri" : "https://huggingface.co/FacehugmanIII/4x_foolhardy_Remacri/resolve/main/4x_foolhardy_Remacri.pth",
-    "Remacri4xExtraSmoother" : "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/Remacri%204x%20ExtraSmoother.pth",
-    "AnimeSharp4x" : "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/AnimeSharp%204x.pth",
+    "4x_foolhardy_Remacri": "https://huggingface.co/FacehugmanIII/4x_foolhardy_Remacri/resolve/main/4x_foolhardy_Remacri.pth",
+    "Remacri4xExtraSmoother": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/Remacri%204x%20ExtraSmoother.pth",
+    "AnimeSharp4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/AnimeSharp%204x.pth",
     "lollypop" : "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/lollypop.pth",
-    "RealisticRescaler4x" : "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/RealisticRescaler%204x.pth",
-    "NickelbackFS4x" : "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/NickelbackFS%204x.pth"
+    "RealisticRescaler4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/RealisticRescaler%204x.pth",
+    "NickelbackFS4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/NickelbackFS%204x.pth"
 }
 
 upscaler_keys = list(upscaler_dict_gui.keys())
@@ -376,6 +385,7 @@ warnings.filterwarnings(action="ignore", category=FutureWarning, module="transfo
 from stablepy import logger
 logger.setLevel(logging.DEBUG)
 
+
 def info_html(json_data, title, subtitle):
     return f"""
         <div style='padding: 0; border-radius: 10px;'>
@@ -386,6 +396,7 @@ def info_html(json_data, title, subtitle):
             </details>
         </div>
         """
+
 
 class GuiSD:
     def __init__(self, stream=True):
@@ -590,10 +601,8 @@ class GuiSD:
         model_precision = torch.float16
         self.model.device = torch.device("cuda:0")
         if not self.model:
-            from modelstream import Model_Diffusers2
-
             print("Loading model...")
-            self.model = Model_Diffusers2(
+            self.model = Model_Diffusers(
                 base_model_id=model_name,
                 task_name=task,
                 vae_model=vae_model if vae_model != "None" else None,
@@ -760,6 +769,14 @@ class GuiSD:
 
                 info_state = info_state + "<br>" + "GENERATION DATA:<br>" + "<br>-------<br>".join(metadata).replace("\n", "<br>") 
 
+                download_links = "<br>".join(
+                    [
+                        f'<a href="{path.replace("/images/", "/file=/home/user/app/images/")}" download="{os.path.basename(path)}">Download Image {i + 1}</a>'
+                        for i, path in enumerate(image_path)
+                    ]
+                )
+                info_state += f"<br>{download_links}"
+
             yield img, info_state
 
 
@@ -808,7 +825,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     clear_prompt_gui = gr.Button(value="🗑️")
                     set_random_seed = gr.Button(value="🎲")
                 generate_button = gr.Button(value="GENERATE", variant="primary")
-                
+
                 model_name_gui.change(
                     update_task_options,
                     [model_name_gui, task_gui],
@@ -816,7 +833,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 )
 
                 load_model_gui = gr.HTML()
-                
+
                 result_images = gr.Gallery(
                     label="Generated images",
                     show_label=False,
@@ -922,7 +939,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     ("Classic-ignore", "Classic-ignore"),
                     ("None", "None"),
                 ]
-                prompt_syntax_gui = gr.Dropdown(label="Prompt Syntax", choices=prompt_s_options, value=prompt_s_options[0][1])
+                prompt_syntax_gui = gr.Dropdown(label="Prompt Syntax", choices=prompt_s_options, value=prompt_s_options[1][1])
                 vae_model_gui = gr.Dropdown(label="VAE Model", choices=vae_model_list)
 
                 with gr.Accordion("Hires fix", open=False, visible=True):
@@ -938,19 +955,26 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     hires_negative_prompt_gui = gr.Textbox(label="Hires Negative Prompt", placeholder="Main negative prompt will be use", lines=3)
 
                 with gr.Accordion("LoRA", open=False, visible=True):
-                    lora1_gui = gr.Dropdown(label="Lora1", choices=lora_model_list)
-                    lora_scale_1_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 1")
-                    lora2_gui = gr.Dropdown(label="Lora2", choices=lora_model_list)
-                    lora_scale_2_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 2")
-                    lora3_gui = gr.Dropdown(label="Lora3", choices=lora_model_list)
-                    lora_scale_3_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 3")
-                    lora4_gui = gr.Dropdown(label="Lora4", choices=lora_model_list)
-                    lora_scale_4_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 4")
-                    lora5_gui = gr.Dropdown(label="Lora5", choices=lora_model_list)
-                    lora_scale_5_gui = gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label="Lora Scale 5")
+
+                    def lora_dropdown(label):
+                        return gr.Dropdown(label=label, choices=lora_model_list, allow_custom_value=True)
+
+                    def lora_scale_slider(label):
+                        return gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label=label)
+
+                    lora1_gui = lora_dropdown("Lora1")
+                    lora_scale_1_gui = lora_scale_slider("Lora Scale 1")
+                    lora2_gui = lora_dropdown("Lora2")
+                    lora_scale_2_gui = lora_scale_slider("Lora Scale 2")
+                    lora3_gui = lora_dropdown("Lora3")
+                    lora_scale_3_gui = lora_scale_slider("Lora Scale 3")
+                    lora4_gui = lora_dropdown("Lora4")
+                    lora_scale_4_gui = lora_scale_slider("Lora Scale 4")
+                    lora5_gui = lora_dropdown("Lora5")
+                    lora_scale_5_gui = lora_scale_slider("Lora Scale 5")
 
                     with gr.Accordion("From URL", open=False, visible=True):
-                        text_lora = gr.Textbox(label="URL", placeholder="http://...my_lora_url.safetensors", lines=1)
+                        text_lora = gr.Textbox(label="LoRA URL", placeholder="https://civitai.com/api/download/models/28907", lines=1)
                         button_lora = gr.Button("Get and update lists of LoRAs")
                         button_lora.click(
                             get_my_lora,
@@ -958,7 +982,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                             [lora1_gui, lora2_gui, lora3_gui, lora4_gui, lora5_gui]
                         )
 
-                with gr.Accordion("IP-Adapter", open=False, visible=True):##############
+                with gr.Accordion("IP-Adapter", open=False, visible=True):
 
                     IP_MODELS = sorted(list(set(IP_ADAPTERS_SD + IP_ADAPTERS_SDXL)))
                     MODE_IP_OPTIONS = ["original", "style", "layout", "style+layout"]
@@ -1094,7 +1118,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     leave_progress_bar_gui = gr.Checkbox(value=True, label="Leave Progress Bar")
                     disable_progress_bar_gui = gr.Checkbox(value=False, label="Disable Progress Bar")
                     display_images_gui = gr.Checkbox(value=True, label="Display Images")
-                    save_generated_images_gui = gr.Checkbox(value=False, label="Save Generated Images")
+                    save_generated_images_gui = gr.Checkbox(value=True, label="Save Generated Images")
                     image_storage_location_gui = gr.Textbox(value="./images", label="Image Storage Location")
                     retain_compel_previous_load_gui = gr.Checkbox(value=False, label="Retain Compel Previous Load")
                     retain_detailfix_model_previous_load_gui = gr.Checkbox(value=False, label="Retain Detailfix Model Previous Load")
@@ -1619,4 +1643,5 @@ app.queue()
 app.launch(
     show_error=True,
     debug=True,
+    allowed_paths=["./images/"],
 )
