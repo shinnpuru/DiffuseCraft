@@ -243,7 +243,7 @@ load_diffusers_format_model = [
 ]
 
 CIVITAI_API_KEY = os.environ.get("CIVITAI_API_KEY")
-hf_token = os.environ.get("HF_TOKEN")
+hf_token = os.environ.get("HF_READ_TOKEN")
 
 # Download stuffs
 for url in [url.strip() for url in download_model.split(',')]:
@@ -442,7 +442,7 @@ class GuiSD:
         )
         yield f"Model loaded: {model_name}"
 
-    @spaces.GPU(duration=35)
+    @spaces.GPU(duration=59)
     @torch.inference_mode()
     def generate_pipeline(
         self,
