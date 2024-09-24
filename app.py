@@ -185,6 +185,10 @@ download_vae = "https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/m
 download_lora = "https://civitai.com/api/download/models/28907, https://huggingface.co/Leopain/color/resolve/main/Coloring_book_-_LineArt.safetensors, https://civitai.com/api/download/models/135867, https://civitai.com/api/download/models/145907, https://huggingface.co/Linaqruf/anime-detailer-xl-lora/resolve/main/anime-detailer-xl.safetensors?download=true, https://huggingface.co/Linaqruf/style-enhancer-xl-lora/resolve/main/style-enhancer-xl.safetensors?download=true, https://civitai.com/api/download/models/28609, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SD15-8steps-CFG-lora.safetensors?download=true, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SDXL-8steps-CFG-lora.safetensors?download=true"
 load_diffusers_format_model = [
     'stabilityai/stable-diffusion-xl-base-1.0',
+    'black-forest-labs/FLUX.1-dev',
+    'John6666/blue-pencil-flux1-v021-fp8-flux',
+    'John6666/wai-ani-flux-v10forfp8-fp8-flux',
+    'John6666/xe-anime-flux-v04-fp8-flux',
     'cagliostrolab/animagine-xl-3.1',
     'John6666/epicrealism-xl-v8kiss-sdxl',
     'misri/epicrealismXL_v7FinalDestination',
@@ -404,7 +408,7 @@ class GuiSD:
 
         print("Loading model...")
         self.model = Model_Diffusers(
-            base_model_id="cagliostrolab/animagine-xl-3.1",
+            base_model_id="Lykon/dreamshaper-8",
             task_name="txt2img",
             vae_model=None,
             type_model_precision=torch.float16,
@@ -433,12 +437,13 @@ class GuiSD:
             model_name,
             task_name=task_stablepy[task],
             vae_model=vae_model if vae_model != "None" else None,
-            type_model_precision=torch.float16,
+            type_model_precision=torch.float16 if "flux" not in model_name.lower() else torch.bfloat16,
             retain_task_model_in_cache=False,
         )
         yield f"Model loaded: {model_name}"
 
-    @spaces.GPU
+    @spaces.GPU(duration=35)
+    @torch.inference_mode()
     def generate_pipeline(
         self,
         prompt,
@@ -597,9 +602,9 @@ class GuiSD:
                 params_ip_mode.append(modeip)
                 params_ip_scale.append(scaleip)
 
+        model_precision = torch.float16 if "flux" not in model_name.lower() else torch.bfloat16
+        
         # First load
-        model_precision = torch.float16
-        self.model.device = torch.device("cuda:0")
         if not self.model:
             print("Loading model...")
             self.model = Model_Diffusers(
@@ -750,6 +755,11 @@ class GuiSD:
             "ip_adapter_scale": params_ip_scale,
         }
 
+        self.model.device = torch.device("cuda:0")
+        if hasattr(self.model.pipe, "transformer") and loras_list != ["None"] * 5:
+            self.model.pipe.transformer.to(self.model.device)
+            print("transformer to cuda")
+        
         info_state = "PROCESSING "
         for img, seed, image_path, metadata in self.model(**pipe_params):
             info_state += ">"
