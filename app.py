@@ -3,8 +3,10 @@ import os
 from stablepy import Model_Diffusers
 from stablepy.diffusers_vanilla.model import scheduler_names
 from stablepy.diffusers_vanilla.style_prompt_config import STYLE_NAMES
+from stablepy.diffusers_vanilla.constants import FLUX_CN_UNION_MODES
 import torch
 import re
+from huggingface_hub import HfApi
 import shutil
 import random
 from stablepy import (
@@ -123,7 +125,7 @@ task_stablepy = {
     'tile ControlNet': 'tile',
 }
 
-task_model_list = list(task_stablepy.keys())
+TASK_MODEL_LIST = list(task_stablepy.keys())
 
 
 def download_things(directory, url, hf_token="", civitai_api_key=""):
@@ -329,6 +331,7 @@ upscaler_dict_gui = {
 
 upscaler_keys = list(upscaler_dict_gui.keys())
 
+
 def extract_parameters(input_string):
     parameters = {}
     input_string = input_string.replace("\n", "")
@@ -374,10 +377,6 @@ def extract_parameters(input_string):
 #######################
 import spaces
 import gradio as gr
-from PIL import Image
-import IPython.display
-import time, json
-from IPython.utils import capture
 import logging
 logging.getLogger("diffusers").setLevel(logging.ERROR)
 import diffusers
@@ -387,7 +386,13 @@ warnings.filterwarnings(action="ignore", category=FutureWarning, module="diffuse
 warnings.filterwarnings(action="ignore", category=UserWarning, module="diffusers")
 warnings.filterwarnings(action="ignore", category=FutureWarning, module="transformers")
 from stablepy import logger
+
 logger.setLevel(logging.DEBUG)
+
+msg_inc_vae = (
+    "Use the right VAE for your model to maintain image quality. The wrong"
+    " VAE can lead to poor results, like blurriness in the generated images."
+)
 
 
 def info_html(json_data, title, subtitle):
@@ -400,6 +405,19 @@ def info_html(json_data, title, subtitle):
             </details>
         </div>
         """
+
+
+def get_model_type(repo_id: str):
+    api = HfApi(token=os.environ.get("HF_TOKEN"))  # if use private or gated model
+    default = "SD 1.5"
+    try:
+        model = api.model_info(repo_id=repo_id, timeout=5.0)
+        tags = model.tags
+        for tag in tags:
+            if tag in MODEL_TYPE_CLASS.keys(): return MODEL_TYPE_CLASS.get(tag, default)
+    except Exception:
+        return default
+    return default
 
 
 class GuiSD:
@@ -421,23 +439,21 @@ class GuiSD:
         yield f"Loading model: {model_name}"
 
         vae_model = vae_model if vae_model != "None" else None
+        model_type = get_model_type(model_name)
 
-        if model_name in model_list:
-            model_is_xl = "xl" in model_name.lower()
-            sdxl_in_vae = vae_model and "sdxl" in vae_model.lower()
-            model_type = "SDXL" if model_is_xl else "SD 1.5"
-            incompatible_vae = (model_is_xl and vae_model and not sdxl_in_vae) or (not model_is_xl and sdxl_in_vae)
-
-            if incompatible_vae:
-                vae_model = None
+        if vae_model:
+            vae_type = "SXDL" if "sdxl" in vae_model.lower() else "SD 1.5"
+            if model_type != vae_type:
+                gr.Info(msg_inc_vae)
 
         self.model.device = torch.device("cpu")
+        dtype_model = torch.bfloat16 if model_type == "FLUX" else torch.float16
 
         self.model.load_pipe(
             model_name,
             task_name=task_stablepy[task],
-            vae_model=vae_model if vae_model != "None" else None,
-            type_model_precision=torch.float16 if "flux" not in model_name.lower() else torch.bfloat16,
+            vae_model=vae_model,
+            type_model_precision=dtype_model,
             retain_task_model_in_cache=False,
         )
         yield f"Model loaded: {model_name}"
@@ -555,30 +571,7 @@ class GuiSD:
         vae_msg = f"VAE: {vae_model}" if vae_model else ""
         msg_lora = []
 
-        if model_name in model_list:
-            model_is_xl = "xl" in model_name.lower()
-            sdxl_in_vae = vae_model and "sdxl" in vae_model.lower()
-            model_type = "SDXL" if model_is_xl else "SD 1.5"
-            incompatible_vae = (model_is_xl and vae_model and not sdxl_in_vae) or (not model_is_xl and sdxl_in_vae)
-
-            if incompatible_vae:
-                msg_inc_vae = (
-                    f"The selected VAE is for a { 'SD 1.5' if model_is_xl else 'SDXL' } model, but you"
-                    f" are using a { model_type } model. The default VAE "
-                    "will be used."
-                )
-                gr.Info(msg_inc_vae)
-                vae_msg = msg_inc_vae
-                vae_model = None
-
-            for la in loras_list:
-                if la is not None and la != "None" and la in lora_model_list:
-                    print(la)
-                    lora_type = ("animetarot" in la.lower() or "Hyper-SD15-8steps".lower() in la.lower())
-                    if (model_is_xl and lora_type) or (not model_is_xl and not lora_type):
-                        msg_inc_lora = f"The LoRA {la} is for { 'SD 1.5' if model_is_xl else 'SDXL' }, but you are using { model_type }."
-                        gr.Info(msg_inc_lora)
-                        msg_lora.append(msg_inc_lora)
+        print("Config model:", model_name, vae_model, loras_list)
 
         task = task_stablepy[task]
 
@@ -602,18 +595,6 @@ class GuiSD:
                 params_ip_mode.append(modeip)
                 params_ip_scale.append(scaleip)
 
-        model_precision = torch.float16 if "flux" not in model_name.lower() else torch.bfloat16
-        
-        # First load
-        if not self.model:
-            print("Loading model...")
-            self.model = Model_Diffusers(
-                base_model_id=model_name,
-                task_name=task,
-                vae_model=vae_model if vae_model != "None" else None,
-                type_model_precision=model_precision,
-                retain_task_model_in_cache=retain_task_cache_gui,
-            )
         self.model.stream_config(concurrency=5, latent_resize_by=1, vae_decoding=False)
 
         if task != "txt2img" and not image_control:
@@ -637,45 +618,32 @@ class GuiSD:
 
         logging.getLogger("ultralytics").setLevel(logging.INFO if adetailer_verbose else logging.ERROR)
 
-        print("Config model:", model_name, vae_model, loras_list)
-
-        self.model.load_pipe(
-            model_name,
-            task_name=task,
-            vae_model=vae_model if vae_model != "None" else None,
-            type_model_precision=model_precision,
-            retain_task_model_in_cache=retain_task_cache_gui,
-        )
-
-        if textual_inversion and self.model.class_name == "StableDiffusionXLPipeline":
-            print("No Textual inversion for SDXL")
-
         adetailer_params_A = {
-            "face_detector_ad" : face_detector_ad_a,
-            "person_detector_ad" : person_detector_ad_a,
-            "hand_detector_ad" : hand_detector_ad_a,
+            "face_detector_ad": face_detector_ad_a,
+            "person_detector_ad": person_detector_ad_a,
+            "hand_detector_ad": hand_detector_ad_a,
             "prompt": prompt_ad_a,
-            "negative_prompt" : negative_prompt_ad_a,
-            "strength" : strength_ad_a,
+            "negative_prompt": negative_prompt_ad_a,
+            "strength": strength_ad_a,
             # "image_list_task" : None,
-            "mask_dilation" : mask_dilation_a,
-            "mask_blur" : mask_blur_a,
-            "mask_padding" : mask_padding_a,
-            "inpaint_only" : adetailer_inpaint_only,
-            "sampler" : adetailer_sampler,
+            "mask_dilation": mask_dilation_a,
+            "mask_blur": mask_blur_a,
+            "mask_padding": mask_padding_a,
+            "inpaint_only": adetailer_inpaint_only,
+            "sampler": adetailer_sampler,
         }
 
         adetailer_params_B = {
-            "face_detector_ad" : face_detector_ad_b,
-            "person_detector_ad" : person_detector_ad_b,
-            "hand_detector_ad" : hand_detector_ad_b,
+            "face_detector_ad": face_detector_ad_b,
+            "person_detector_ad": person_detector_ad_b,
+            "hand_detector_ad": hand_detector_ad_b,
             "prompt": prompt_ad_b,
-            "negative_prompt" : negative_prompt_ad_b,
-            "strength" : strength_ad_b,
+            "negative_prompt": negative_prompt_ad_b,
+            "strength": strength_ad_b,
             # "image_list_task" : None,
-            "mask_dilation" : mask_dilation_b,
-            "mask_blur" : mask_blur_b,
-            "mask_padding" : mask_padding_b,
+            "mask_dilation": mask_dilation_b,
+            "mask_blur": mask_blur_b,
+            "mask_padding": mask_padding_b,
         }
         pipe_params = {
             "prompt": prompt,
@@ -759,7 +727,7 @@ class GuiSD:
         if hasattr(self.model.pipe, "transformer") and loras_list != ["None"] * 5:
             self.model.pipe.transformer.to(self.model.device)
             print("transformer to cuda")
-        
+
         info_state = "PROCESSING "
         for img, seed, image_path, metadata in self.model(**pipe_params):
             info_state += ">"
@@ -786,42 +754,53 @@ class GuiSD:
 
 sd_gen = GuiSD()
 
-CSS ="""
+CSS = """
 .contain { display: flex; flex-direction: column; }
 #component-0 { height: 100%; }
 #gallery { flex-grow: 1; }
 """
-sdxl_task = [k for k, v in task_stablepy.items() if v in SDXL_TASKS ]
-sd_task = [k for k, v in task_stablepy.items() if v in SD15_TASKS ]
+SDXL_TASK = [k for k, v in task_stablepy.items() if v in SDXL_TASKS ]
+SD_TASK = [k for k, v in task_stablepy.items() if v in SD15_TASKS ]
+FLUX_TASK = list(task_stablepy.keys())[:3] + [k for k, v in task_stablepy.items() if v in FLUX_CN_UNION_MODES.keys() ]
+
+MODEL_TYPE_TASK = {
+    "SD 1.5": SD_TASK,
+    "SDXL": SDXL_TASK,
+    "FLUX": FLUX_TASK,
+}
+
+MODEL_TYPE_CLASS = {
+    "diffusers:StableDiffusionPipeline": "SD 1.5",
+    "diffusers:StableDiffusionXLPipeline": "SDXL",
+    "diffusers:FluxPipeline": "FLUX",
+}
+
+
 def update_task_options(model_name, task_name):
-    if model_name in model_list:
-        if "xl" in model_name.lower() or "pony" in model_name.lower():
-            new_choices = sdxl_task
-        else:
-            new_choices = sd_task
+    new_choices = MODEL_TYPE_TASK[get_model_type(model_name)]
 
-        if task_name not in new_choices:
-            task_name = "txt2img"
+    if task_name not in new_choices:
+        task_name = "txt2img"
 
-        return gr.update(value=task_name, choices=new_choices)
-    else:
-        return gr.update(value=task_name, choices=task_model_list)
+    return gr.update(value=task_name, choices=new_choices)
+
 
 POST_PROCESSING_SAMPLER = ["Use same sampler"] + scheduler_names[:-2]
 
+SUBTITLE_GUI = (
+    "### This demo uses [diffusers](https://github.com/huggingface/diffusers)"
+    " to perform different tasks in image generation."
+)
+
 with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
     gr.Markdown("# 🧩 DiffuseCraft")
-    gr.Markdown(
-        f"""
-            ### This demo uses [diffusers](https://github.com/huggingface/diffusers) to perform different tasks in image generation.
-            """
-    )
+    gr.Markdown(SUBTITLE_GUI)
     with gr.Tab("Generation"):
         with gr.Row():
 
             with gr.Column(scale=2):
 
-                task_gui = gr.Dropdown(label="Task", choices=sdxl_task, value=task_model_list[0])
+                task_gui = gr.Dropdown(label="Task", choices=SDXL_TASK, value=TASK_MODEL_LIST[0])
                 model_name_gui = gr.Dropdown(label="Model", choices=model_list, value=model_list[0], allow_custom_value=True)
                 prompt_gui = gr.Textbox(lines=5, placeholder="Enter prompt", label="Prompt")
                 neg_prompt_gui = gr.Textbox(lines=3, placeholder="Enter Neg prompt", label="Negative prompt")
@@ -1140,7 +1119,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             gr.Markdown(
                 """### The following examples perform specific tasks:
                 1. Generation with SDXL and upscale
-                2. Generation with SDXL
+                2. Generation with FLUX dev
                 3. ControlNet Canny SDXL
                 4. Optical pattern (Optical illusion) SDXL
                 5. Convert an image to a coloring drawing
@@ -1195,11 +1174,11 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         "Nearest",
                     ],
                     [
-                        "score_9, score_8_up, score_8, medium breasts, cute, eyelashes , princess Zelda OOT, cute small face, long hair, crown braid, hairclip, pointy ears, soft curvy body, solo, looking at viewer, smile, blush, white dress, medium body, (((holding the Master Sword))), standing, deep forest in the background",
-                        "score_6, score_5, score_4, busty, ugly face, mutated hands, low res, blurry face, black and white,",
+                        "a tiny astronaut hatching from an egg on the moon",
+                        "",
                         1,
-                        30,
-                        5.,
+                        28,
+                        3.5,
                         True,
                         -1,
                         "None",
@@ -1207,15 +1186,15 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         "None",
                         1.0,
                         "None",
-                        1.0,                        
-                        "None",
                         1.0,
                         "None",
                         1.0,
-                        "DPM++ 2M Karras",
+                        "None",
+                        1.0,
+                        "Euler a",
                         1024,
                         1024,
-                        "kitty7779/ponyDiffusionV6XL",
+                        "black-forest-labs/FLUX.1-dev",
                         None, # vae
                         "txt2img",
                         None, # img conttol
@@ -1235,7 +1214,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         1., # cn end
                         False, # ti
                         "Classic",
-                        "Nearest",
+                        None,
                     ],
                     [
                         "((masterpiece)), best quality, blonde disco girl, detailed face, realistic face, realistic hair, dynamic pose, pink pvc, intergalactic disco background, pastel lights, dynamic contrast, airbrush, fine detail, 70s vibe, midriff  ",
