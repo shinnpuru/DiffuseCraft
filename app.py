@@ -1,14 +1,11 @@
 import spaces
 import os
 from stablepy import Model_Diffusers
-from stablepy.diffusers_vanilla.model import scheduler_names
 from stablepy.diffusers_vanilla.style_prompt_config import STYLE_NAMES
 from stablepy.diffusers_vanilla.constants import FLUX_CN_UNION_MODES
 import torch
 import re
 from huggingface_hub import HfApi
-import shutil
-import random
 from stablepy import (
     CONTROLNET_MODEL_IDS,
     VALID_TASKS,
@@ -24,9 +21,77 @@ from stablepy import (
     SD15_TASKS,
     SDXL_TASKS,
 )
-import urllib.parse
+# import urllib.parse
 
-preprocessor_controlnet = {
+# - **Download SD 1.5 Models**
+download_model = "https://civitai.com/api/download/models/574369, https://huggingface.co/TechnoByte/MilkyWonderland/resolve/main/milkyWonderland_v40.safetensors"
+# - **Download VAEs**
+download_vae = "https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-c-1.1-b-0.5.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-blessed.safetensors?download=true, https://huggingface.co/digiplay/VAE/resolve/main/vividReal_v20.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true"
+# - **Download LoRAs**
+download_lora = "https://civitai.com/api/download/models/28907, https://huggingface.co/Leopain/color/resolve/main/Coloring_book_-_LineArt.safetensors, https://civitai.com/api/download/models/135867, https://civitai.com/api/download/models/145907, https://huggingface.co/Linaqruf/anime-detailer-xl-lora/resolve/main/anime-detailer-xl.safetensors?download=true, https://huggingface.co/Linaqruf/style-enhancer-xl-lora/resolve/main/style-enhancer-xl.safetensors?download=true, https://civitai.com/api/download/models/28609, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SD15-8steps-CFG-lora.safetensors?download=true, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SDXL-8steps-CFG-lora.safetensors?download=true"
+load_diffusers_format_model = [
+    'stabilityai/stable-diffusion-xl-base-1.0',
+    'black-forest-labs/FLUX.1-dev',
+    'John6666/blue-pencil-flux1-v021-fp8-flux',
+    'John6666/wai-ani-flux-v10forfp8-fp8-flux',
+    'John6666/xe-anime-flux-v04-fp8-flux',
+    'cagliostrolab/animagine-xl-3.1',
+    'John6666/epicrealism-xl-v8kiss-sdxl',
+    'misri/epicrealismXL_v7FinalDestination',
+    'misri/juggernautXL_juggernautX',
+    'misri/zavychromaxl_v80',
+    'SG161222/RealVisXL_V4.0',
+    'SG161222/RealVisXL_V5.0',
+    'misri/newrealityxlAllInOne_Newreality40',
+    'eienmojiki/Anything-XL',
+    'eienmojiki/Starry-XL-v5.2',
+    'gsdf/CounterfeitXL',
+    'KBlueLeaf/Kohaku-XL-Zeta',
+    'John6666/silvermoon-mix-01xl-v11-sdxl',
+    'WhiteAiZ/autismmixSDXL_autismmixConfetti_diffusers',
+    'kitty7779/ponyDiffusionV6XL',
+    'GraydientPlatformAPI/aniverse-pony',
+    'John6666/mistoon-anime-ponyalpha-sdxl',
+    'John6666/ebara-mfcg-pony-mix-v12-sdxl',
+    'John6666/t-ponynai3-v51-sdxl',
+    'John6666/mala-anime-mix-nsfw-pony-xl-v5-sdxl',
+    'John6666/wai-real-mix-v11-sdxl',
+    'John6666/cyberrealistic-pony-v63-sdxl',
+    'GraydientPlatformAPI/realcartoon-pony-diffusion',
+    'John6666/nova-anime-xl-pony-v5-sdxl',
+    'John6666/autismmix-sdxl-autismmix-pony-sdxl',
+    'yodayo-ai/kivotos-xl-2.0',
+    'yodayo-ai/holodayo-xl-2.1',
+    'yodayo-ai/clandestine-xl-1.0',
+    'digiplay/majicMIX_sombre_v2',
+    'digiplay/majicMIX_realistic_v6',
+    'digiplay/majicMIX_realistic_v7',
+    'digiplay/DreamShaper_8',
+    'digiplay/BeautifulArt_v1',
+    'digiplay/DarkSushi2.5D_v1',
+    'digiplay/darkphoenix3D_v1.1',
+    'digiplay/BeenYouLiteL11_diffusers',
+    'Yntec/RevAnimatedV2Rebirth',
+    'youknownothing/cyberrealistic_v50',
+    'youknownothing/deliberate-v6',
+    'GraydientPlatformAPI/deliberate-cyber3',
+    'GraydientPlatformAPI/picx-real',
+    'GraydientPlatformAPI/perfectworld6',
+    'emilianJR/epiCRealism',
+    'votepurchase/counterfeitV30_v30',
+    'votepurchase/ChilloutMix',
+    'Meina/MeinaMix_V11',
+    'Meina/MeinaUnreal_V5',
+    'Meina/MeinaPastel_V7',
+    'GraydientPlatformAPI/realcartoon3d-17',
+    'GraydientPlatformAPI/realcartoon-pixar11',
+    'GraydientPlatformAPI/realcartoon-real17',
+]
+
+CIVITAI_API_KEY = os.environ.get("CIVITAI_API_KEY")
+HF_TOKEN = os.environ.get("HF_READ_TOKEN")
+
+PREPROCESSOR_CONTROLNET = {
   "openpose": [
     "Openpose",
     "None",
@@ -99,7 +164,7 @@ preprocessor_controlnet = {
 
 }
 
-task_stablepy = {
+TASK_STABLEPY = {
     'txt2img': 'txt2img',
     'img2img': 'img2img',
     'inpaint': 'inpaint',
@@ -125,7 +190,35 @@ task_stablepy = {
     'tile ControlNet': 'tile',
 }
 
-TASK_MODEL_LIST = list(task_stablepy.keys())
+TASK_MODEL_LIST = list(TASK_STABLEPY.keys())
+
+UPSCALER_DICT_GUI = {
+    None: None,
+    "Lanczos": "Lanczos",
+    "Nearest": "Nearest",
+    'Latent': 'Latent',
+    'Latent (antialiased)': 'Latent (antialiased)',
+    'Latent (bicubic)': 'Latent (bicubic)',
+    'Latent (bicubic antialiased)': 'Latent (bicubic antialiased)',
+    'Latent (nearest)': 'Latent (nearest)',
+    'Latent (nearest-exact)': 'Latent (nearest-exact)',
+    "RealESRGAN_x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
+    "RealESRNet_x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.1/RealESRNet_x4plus.pth",
+    "RealESRGAN_x4plus_anime_6B": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
+    "RealESRGAN_x2plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth",
+    "realesr-animevideov3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-animevideov3.pth",
+    "realesr-general-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-x4v3.pth",
+    "realesr-general-wdn-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-wdn-x4v3.pth",
+    "4x-UltraSharp": "https://huggingface.co/Shandypur/ESRGAN-4x-UltraSharp/resolve/main/4x-UltraSharp.pth",
+    "4x_foolhardy_Remacri": "https://huggingface.co/FacehugmanIII/4x_foolhardy_Remacri/resolve/main/4x_foolhardy_Remacri.pth",
+    "Remacri4xExtraSmoother": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/Remacri%204x%20ExtraSmoother.pth",
+    "AnimeSharp4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/AnimeSharp%204x.pth",
+    "lollypop": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/lollypop.pth",
+    "RealisticRescaler4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/RealisticRescaler%204x.pth",
+    "NickelbackFS4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/NickelbackFS%204x.pth"
+}
+
+UPSCALER_KEYS = list(UPSCALER_DICT_GUI.keys())
 
 
 def download_things(directory, url, hf_token="", civitai_api_key=""):
@@ -164,7 +257,7 @@ def get_model_list(directory_path):
 
     for filename in os.listdir(directory_path):
         if os.path.splitext(filename)[1] in valid_extensions:
-            name_without_extension = os.path.splitext(filename)[0]
+            # name_without_extension = os.path.splitext(filename)[0]
             file_path = os.path.join(directory_path, filename)
             # model_list.append((name_without_extension, file_path))
             model_list.append(file_path)
@@ -179,84 +272,16 @@ os.makedirs(directory_loras, exist_ok=True)
 directory_vaes = 'vaes'
 os.makedirs(directory_vaes, exist_ok=True)
 
-# - **Download SD 1.5 Models**
-download_model = "https://civitai.com/api/download/models/574369, https://huggingface.co/TechnoByte/MilkyWonderland/resolve/main/milkyWonderland_v40.safetensors"
-# - **Download VAEs**
-download_vae = "https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-c-1.1-b-0.5.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-blessed.safetensors?download=true, https://huggingface.co/digiplay/VAE/resolve/main/vividReal_v20.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true"
-# - **Download LoRAs**
-download_lora = "https://civitai.com/api/download/models/28907, https://huggingface.co/Leopain/color/resolve/main/Coloring_book_-_LineArt.safetensors, https://civitai.com/api/download/models/135867, https://civitai.com/api/download/models/145907, https://huggingface.co/Linaqruf/anime-detailer-xl-lora/resolve/main/anime-detailer-xl.safetensors?download=true, https://huggingface.co/Linaqruf/style-enhancer-xl-lora/resolve/main/style-enhancer-xl.safetensors?download=true, https://civitai.com/api/download/models/28609, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SD15-8steps-CFG-lora.safetensors?download=true, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SDXL-8steps-CFG-lora.safetensors?download=true"
-load_diffusers_format_model = [
-    'stabilityai/stable-diffusion-xl-base-1.0',
-    'black-forest-labs/FLUX.1-dev',
-    'John6666/blue-pencil-flux1-v021-fp8-flux',
-    'John6666/wai-ani-flux-v10forfp8-fp8-flux',
-    'John6666/xe-anime-flux-v04-fp8-flux',
-    'cagliostrolab/animagine-xl-3.1',
-    'John6666/epicrealism-xl-v8kiss-sdxl',
-    'misri/epicrealismXL_v7FinalDestination',
-    'misri/juggernautXL_juggernautX',
-    'misri/zavychromaxl_v80',
-    'SG161222/RealVisXL_V4.0',
-    'SG161222/RealVisXL_V5.0',
-    'misri/newrealityxlAllInOne_Newreality40',
-    'eienmojiki/Anything-XL',
-    'eienmojiki/Starry-XL-v5.2',
-    'gsdf/CounterfeitXL',
-    'KBlueLeaf/Kohaku-XL-Zeta',
-    'John6666/silvermoon-mix-01xl-v11-sdxl',
-    'WhiteAiZ/autismmixSDXL_autismmixConfetti_diffusers',
-    'kitty7779/ponyDiffusionV6XL',
-    'GraydientPlatformAPI/aniverse-pony',
-    'John6666/mistoon-anime-ponyalpha-sdxl',
-    'John6666/ebara-mfcg-pony-mix-v12-sdxl',
-    'John6666/t-ponynai3-v51-sdxl',
-    'John6666/mala-anime-mix-nsfw-pony-xl-v5-sdxl',
-    'John6666/wai-real-mix-v11-sdxl',
-    'John6666/cyberrealistic-pony-v63-sdxl',
-    'GraydientPlatformAPI/realcartoon-pony-diffusion',
-    'John6666/nova-anime-xl-pony-v5-sdxl',
-    'John6666/autismmix-sdxl-autismmix-pony-sdxl',
-    'yodayo-ai/kivotos-xl-2.0',
-    'yodayo-ai/holodayo-xl-2.1',
-    'yodayo-ai/clandestine-xl-1.0',
-    'digiplay/majicMIX_sombre_v2',
-    'digiplay/majicMIX_realistic_v6',
-    'digiplay/majicMIX_realistic_v7',
-    'digiplay/DreamShaper_8',
-    'digiplay/BeautifulArt_v1',
-    'digiplay/DarkSushi2.5D_v1',
-    'digiplay/darkphoenix3D_v1.1',
-    'digiplay/BeenYouLiteL11_diffusers',
-    'Yntec/RevAnimatedV2Rebirth',
-    'youknownothing/cyberrealistic_v50',
-    'youknownothing/deliberate-v6',
-    'GraydientPlatformAPI/deliberate-cyber3',
-    'GraydientPlatformAPI/picx-real',
-    'GraydientPlatformAPI/perfectworld6',
-    'emilianJR/epiCRealism',
-    'votepurchase/counterfeitV30_v30',
-    'votepurchase/ChilloutMix',
-    'Meina/MeinaMix_V11',
-    'Meina/MeinaUnreal_V5',
-    'Meina/MeinaPastel_V7',
-    'GraydientPlatformAPI/realcartoon3d-17',
-    'GraydientPlatformAPI/realcartoon-pixar11',
-    'GraydientPlatformAPI/realcartoon-real17',
-]
-
-CIVITAI_API_KEY = os.environ.get("CIVITAI_API_KEY")
-hf_token = os.environ.get("HF_READ_TOKEN")
-
 # Download stuffs
 for url in [url.strip() for url in download_model.split(',')]:
     if not os.path.exists(f"./models/{url.split('/')[-1]}"):
-        download_things(directory_models, url, hf_token, CIVITAI_API_KEY)
+        download_things(directory_models, url, HF_TOKEN, CIVITAI_API_KEY)
 for url in [url.strip() for url in download_vae.split(',')]:
     if not os.path.exists(f"./vaes/{url.split('/')[-1]}"):
-        download_things(directory_vaes, url, hf_token, CIVITAI_API_KEY)
+        download_things(directory_vaes, url, HF_TOKEN, CIVITAI_API_KEY)
 for url in [url.strip() for url in download_lora.split(',')]:
     if not os.path.exists(f"./loras/{url.split('/')[-1]}"):
-        download_things(directory_loras, url, hf_token, CIVITAI_API_KEY)
+        download_things(directory_loras, url, HF_TOKEN, CIVITAI_API_KEY)
 
 # Download Embeddings
 directory_embeds = 'embedings'
@@ -269,7 +294,7 @@ download_embeds = [
 
 for url_embed in download_embeds:
     if not os.path.exists(f"./embedings/{url_embed.split('/')[-1]}"):
-        download_things(directory_embeds, url_embed, hf_token, CIVITAI_API_KEY)
+        download_things(directory_embeds, url_embed, HF_TOKEN, CIVITAI_API_KEY)
 
 # Build list models
 embed_list = get_model_list(directory_embeds)
@@ -280,70 +305,71 @@ lora_model_list.insert(0, "None")
 vae_model_list = get_model_list(directory_vaes)
 vae_model_list.insert(0, "None")
 
-
-def get_my_lora(link_url):
-    for url in [url.strip() for url in link_url.split(',')]:
-        if not os.path.exists(f"./loras/{url.split('/')[-1]}"):
-            download_things(directory_loras, url, hf_token, CIVITAI_API_KEY)
-    new_lora_model_list = get_model_list(directory_loras)
-    new_lora_model_list.insert(0, "None")
-
-    return gr.update(
-        choices=new_lora_model_list
-    ), gr.update(
-        choices=new_lora_model_list
-    ), gr.update(
-        choices=new_lora_model_list
-    ), gr.update(
-        choices=new_lora_model_list
-    ), gr.update(
-        choices=new_lora_model_list
-    ),
-
-
 print('\033[33m🏁 Download and listing of valid models completed.\033[0m')
 
-upscaler_dict_gui = {
-    None: None,
-    "Lanczos": "Lanczos",
-    "Nearest": "Nearest",
-    'Latent': 'Latent',
-    'Latent (antialiased)': 'Latent (antialiased)',
-    'Latent (bicubic)': 'Latent (bicubic)',
-    'Latent (bicubic antialiased)': 'Latent (bicubic antialiased)',
-    'Latent (nearest)': 'Latent (nearest)',
-    'Latent (nearest-exact)': 'Latent (nearest-exact)',
-    "RealESRGAN_x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
-    "RealESRNet_x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.1/RealESRNet_x4plus.pth",
-    "RealESRGAN_x4plus_anime_6B": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
-    "RealESRGAN_x2plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth",
-    "realesr-animevideov3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-animevideov3.pth",
-    "realesr-general-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-x4v3.pth",
-    "realesr-general-wdn-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-wdn-x4v3.pth",
-    "4x-UltraSharp": "https://huggingface.co/Shandypur/ESRGAN-4x-UltraSharp/resolve/main/4x-UltraSharp.pth",
-    "4x_foolhardy_Remacri": "https://huggingface.co/FacehugmanIII/4x_foolhardy_Remacri/resolve/main/4x_foolhardy_Remacri.pth",
-    "Remacri4xExtraSmoother": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/Remacri%204x%20ExtraSmoother.pth",
-    "AnimeSharp4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/AnimeSharp%204x.pth",
-    "lollypop": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/lollypop.pth",
-    "RealisticRescaler4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/RealisticRescaler%204x.pth",
-    "NickelbackFS4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/NickelbackFS%204x.pth"
+#######################
+# GUI
+#######################
+import gradio as gr
+import logging
+logging.getLogger("diffusers").setLevel(logging.ERROR)
+import diffusers
+diffusers.utils.logging.set_verbosity(40)
+import warnings
+warnings.filterwarnings(action="ignore", category=FutureWarning, module="diffusers")
+warnings.filterwarnings(action="ignore", category=UserWarning, module="diffusers")
+warnings.filterwarnings(action="ignore", category=FutureWarning, module="transformers")
+from stablepy import logger
+
+logger.setLevel(logging.DEBUG)
+
+msg_inc_vae = (
+    "Use the right VAE for your model to maintain image quality. The wrong"
+    " VAE can lead to poor results, like blurriness in the generated images."
+)
+
+SDXL_TASK = [k for k, v in TASK_STABLEPY.items() if v in SDXL_TASKS]
+SD_TASK = [k for k, v in TASK_STABLEPY.items() if v in SD15_TASKS]
+FLUX_TASK = list(TASK_STABLEPY.keys())[:3] + [k for k, v in TASK_STABLEPY.items() if v in FLUX_CN_UNION_MODES.keys()]
+
+MODEL_TYPE_TASK = {
+    "SD 1.5": SD_TASK,
+    "SDXL": SDXL_TASK,
+    "FLUX": FLUX_TASK,
 }
 
-upscaler_keys = list(upscaler_dict_gui.keys())
+MODEL_TYPE_CLASS = {
+    "diffusers:StableDiffusionPipeline": "SD 1.5",
+    "diffusers:StableDiffusionXLPipeline": "SDXL",
+    "diffusers:FluxPipeline": "FLUX",
+}
+
+POST_PROCESSING_SAMPLER = ["Use same sampler"] + scheduler_names[:-2]
+
+CSS = """
+.contain { display: flex; flex-direction: column; }
+#component-0 { height: 100%; }
+#gallery { flex-grow: 1; }
+"""
+
+SUBTITLE_GUI = (
+    "### This demo uses [diffusers](https://github.com/huggingface/diffusers)"
+    " to perform different tasks in image generation."
+)
 
 
 def extract_parameters(input_string):
     parameters = {}
     input_string = input_string.replace("\n", "")
 
-    if not "Negative prompt:" in input_string:
+    if "Negative prompt:" not in input_string:
         print("Negative prompt not detected")
         parameters["prompt"] = input_string
         return parameters
 
     parm = input_string.split("Negative prompt:")
     parameters["prompt"] = parm[0]
-    if not "Steps:" in parm[1]:
+    if "Steps:" not in parm[1]:
         print("Steps not detected")
         parameters["neg_prompt"] = parm[1]
         return parameters
@@ -372,27 +398,24 @@ def extract_parameters(input_string):
     return parameters
 
 
-#######################
-# GUI
-#######################
-import spaces
-import gradio as gr
-import logging
-logging.getLogger("diffusers").setLevel(logging.ERROR)
-import diffusers
-diffusers.utils.logging.set_verbosity(40)
-import warnings
-warnings.filterwarnings(action="ignore", category=FutureWarning, module="diffusers")
-warnings.filterwarnings(action="ignore", category=UserWarning, module="diffusers")
-warnings.filterwarnings(action="ignore", category=FutureWarning, module="transformers")
-from stablepy import logger
+def get_my_lora(link_url):
+    for url in [url.strip() for url in link_url.split(',')]:
+        if not os.path.exists(f"./loras/{url.split('/')[-1]}"):
+            download_things(directory_loras, url, HF_TOKEN, CIVITAI_API_KEY)
+    new_lora_model_list = get_model_list(directory_loras)
+    new_lora_model_list.insert(0, "None")
 
-logger.setLevel(logging.DEBUG)
-
-msg_inc_vae = (
-    "Use the right VAE for your model to maintain image quality. The wrong"
-    " VAE can lead to poor results, like blurriness in the generated images."
-)
+    return gr.update(
+        choices=new_lora_model_list
+    ), gr.update(
+        choices=new_lora_model_list
+    ), gr.update(
+        choices=new_lora_model_list
+    ), gr.update(
+        choices=new_lora_model_list
+    ), gr.update(
+        choices=new_lora_model_list
+    ),
 
 
 def info_html(json_data, title, subtitle):
@@ -442,7 +465,7 @@ class GuiSD:
         model_type = get_model_type(model_name)
 
         if vae_model:
-            vae_type = "SXDL" if "sdxl" in vae_model.lower() else "SD 1.5"
+            vae_type = "SDXL" if "sdxl" in vae_model.lower() else "SD 1.5"
             if model_type != vae_type:
                 gr.Info(msg_inc_vae)
 
@@ -451,11 +474,12 @@ class GuiSD:
 
         self.model.load_pipe(
             model_name,
-            task_name=task_stablepy[task],
+            task_name=TASK_STABLEPY[task],
             vae_model=vae_model,
             type_model_precision=dtype_model,
             retain_task_model_in_cache=False,
         )
+
         yield f"Model loaded: {model_name}"
 
     @spaces.GPU(duration=59)
@@ -573,7 +597,7 @@ class GuiSD:
 
         print("Config model:", model_name, vae_model, loras_list)
 
-        task = task_stablepy[task]
+        task = TASK_STABLEPY[task]
 
         params_ip_img = []
         params_ip_msk = []
@@ -603,16 +627,16 @@ class GuiSD:
         if task == "inpaint" and not image_mask:
             raise ValueError("No mask image found: Specify one in 'Image Mask'")
 
-        if upscaler_model_path in upscaler_keys[:9]:
+        if upscaler_model_path in UPSCALER_KEYS[:9]:
             upscaler_model = upscaler_model_path
         else:
             directory_upscalers = 'upscalers'
             os.makedirs(directory_upscalers, exist_ok=True)
 
-            url_upscaler = upscaler_dict_gui[upscaler_model_path]
+            url_upscaler = UPSCALER_DICT_GUI[upscaler_model_path]
 
             if not os.path.exists(f"./upscalers/{url_upscaler.split('/')[-1]}"):
-                download_things(directory_upscalers, url_upscaler, hf_token)
+                download_things(directory_upscalers, url_upscaler, HF_TOKEN)
 
             upscaler_model = f"./upscalers/{url_upscaler.split('/')[-1]}"
 
@@ -752,30 +776,6 @@ class GuiSD:
             yield img, info_state
 
 
-sd_gen = GuiSD()
-
-CSS = """
-.contain { display: flex; flex-direction: column; }
-#component-0 { height: 100%; }
-#gallery { flex-grow: 1; }
-"""
-SDXL_TASK = [k for k, v in task_stablepy.items() if v in SDXL_TASKS ]
-SD_TASK = [k for k, v in task_stablepy.items() if v in SD15_TASKS ]
-FLUX_TASK = list(task_stablepy.keys())[:3] + [k for k, v in task_stablepy.items() if v in FLUX_CN_UNION_MODES.keys() ]
-
-MODEL_TYPE_TASK = {
-    "SD 1.5": SD_TASK,
-    "SDXL": SDXL_TASK,
-    "FLUX": FLUX_TASK,
-}
-
-MODEL_TYPE_CLASS = {
-    "diffusers:StableDiffusionPipeline": "SD 1.5",
-    "diffusers:StableDiffusionXLPipeline": "SDXL",
-    "diffusers:FluxPipeline": "FLUX",
-}
-
-
 def update_task_options(model_name, task_name):
     new_choices = MODEL_TYPE_TASK[get_model_type(model_name)]
 
@@ -785,12 +785,33 @@ def update_task_options(model_name, task_name):
     return gr.update(value=task_name, choices=new_choices)
 
 
-POST_PROCESSING_SAMPLER = ["Use same sampler"] + scheduler_names[:-2]
+# def sd_gen_generate_pipeline(*args):
 
-SUBTITLE_GUI = (
-    "### This demo uses [diffusers](https://github.com/huggingface/diffusers)"
-    " to perform different tasks in image generation."
-)
+#     # Load lora in CPU
+#     status_lora = sd_gen.model.lora_merge(
+#         lora_A=args[7] if args[7] != "None" else None, lora_scale_A=args[8],
+#         lora_B=args[9] if args[9] != "None" else None, lora_scale_B=args[10],
+#         lora_C=args[11] if args[11] != "None" else None, lora_scale_C=args[12],
+#         lora_D=args[13] if args[13] != "None" else None, lora_scale_D=args[14],
+#         lora_E=args[15] if args[15] != "None" else None, lora_scale_E=args[16],
+#     )
+
+#     lora_list = [args[7], args[9], args[11], args[13], args[15]]
+#     print(status_lora)
+#     for status, lora in zip(status_lora, lora_list):
+#         if status:
+#             gr.Info(f"LoRA loaded: {lora}")
+#         elif status is not None:
+#             gr.Warning(f"Failed to load LoRA: {lora}")
+
+#     # if status_lora == [None] * 5 and self.model.lora_memory != [None] * 5:
+#     #     gr.Info(f"LoRAs in cache: {", ".join(str(x) for x in self.model.lora_memory if x is not None)}")
+
+#     yield from sd_gen.generate_pipeline(*args)
+
+
+# sd_gen_generate_pipeline.zerogpu = True
+sd_gen = GuiSD()
 
 with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
     gr.Markdown("# 🧩 DiffuseCraft")
@@ -856,7 +877,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                             "height": gr.update(value=1024),
                             "Seed": gr.update(value=-1),
                             "Sampler": gr.update(value="Euler a"),
-                            "scale": gr.update(value=7.5), # cfg
+                            "scale": gr.update(value=7.5),  # cfg
                             "skip": gr.update(value=True),
                         }
                         valid_keys = list(valid_receptors.keys())
@@ -866,15 +887,15 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                             # print(val)
                             if key in valid_keys:
                                 if key == "Sampler":
-                                  if val not in scheduler_names:
-                                      continue
+                                    if val not in scheduler_names:
+                                        continue
                                 elif key == "skip":
-                                  if int(val) >= 2:
-                                    val = True
+                                    if int(val) >= 2:
+                                        val = True
                                 if key == "prompt":
-                                  if ">" in val and "<" in val:
-                                    val = re.sub(r'<[^>]+>', '', val)
-                                    print("Removed LoRA written in the prompt")
+                                    if ">" in val and "<" in val:
+                                        val = re.sub(r'<[^>]+>', '', val)
+                                        print("Removed LoRA written in the prompt")
                                 if key in ["prompt", "neg_prompt"]:
                                     val = val.strip()
                                 if key in ["Steps", "width", "height", "Seed"]:
@@ -889,7 +910,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         return [value for value in valid_receptors.values()]
 
                     set_params_gui.click(
-                        run_set_params_gui, [prompt_gui],[
+                        run_set_params_gui, [prompt_gui], [
                             prompt_gui,
                             neg_prompt_gui,
                             steps_gui,
@@ -928,7 +949,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
 
                 with gr.Accordion("Hires fix", open=False, visible=True):
 
-                    upscaler_model_path_gui = gr.Dropdown(label="Upscaler", choices=upscaler_keys, value=upscaler_keys[0])
+                    upscaler_model_path_gui = gr.Dropdown(label="Upscaler", choices=UPSCALER_KEYS, value=UPSCALER_KEYS[0])
                     upscaler_increases_size_gui = gr.Slider(minimum=1.1, maximum=6., step=0.1, value=1.4, label="Upscale by")
                     esrgan_tile_gui = gr.Slider(minimum=0, value=100, maximum=500, step=1, label="ESRGAN Tile")
                     esrgan_tile_overlap_gui = gr.Slider(minimum=1, maximum=200, step=1, value=10, label="ESRGAN Tile Overlap")
@@ -992,14 +1013,14 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         info="This option adjusts the level of changes for img2img and inpainting."
                     )
                     image_resolution_gui = gr.Slider(minimum=64, maximum=2048, step=64, value=1024, label="Image Resolution")
-                    preprocessor_name_gui = gr.Dropdown(label="Preprocessor Name", choices=preprocessor_controlnet["canny"])
+                    preprocessor_name_gui = gr.Dropdown(label="Preprocessor Name", choices=PREPROCESSOR_CONTROLNET["canny"])
 
                     def change_preprocessor_choices(task):
-                        task = task_stablepy[task]
-                        if task in preprocessor_controlnet.keys():
-                            choices_task = preprocessor_controlnet[task]
+                        task = TASK_STABLEPY[task]
+                        if task in PREPROCESSOR_CONTROLNET.keys():
+                            choices_task = PREPROCESSOR_CONTROLNET[task]
                         else:
-                            choices_task = preprocessor_controlnet["canny"]
+                            choices_task = PREPROCESSOR_CONTROLNET["canny"]
                         return gr.update(choices=choices_task, value=choices_task[0])
 
                     task_gui.change(
@@ -1025,7 +1046,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
 
                     try:
                         style_names_found = sd_gen.model.STYLE_NAMES
-                    except:
+                    except Exception:
                         style_names_found = STYLE_NAMES
 
                     style_prompt_gui = gr.Dropdown(
@@ -1123,7 +1144,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 3. ControlNet Canny SDXL
                 4. Optical pattern (Optical illusion) SDXL
                 5. Convert an image to a coloring drawing
-                6. ControlNet OpenPose SD 1.5
+                6. ControlNet OpenPose SD 1.5 and Latent upscale
 
                 - Different tasks can be performed, such as img2img or using the IP adapter, to preserve a person's appearance or a specific style based on an image.
                 """
@@ -1131,309 +1152,162 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             gr.Examples(
                 examples=[
                     [
-                        "1girl, souryuu asuka langley, neon genesis evangelion, plugsuit, pilot suit, red bodysuit, sitting, crossing legs, black eye patch, cat hat, throne, symmetrical, looking down, from bottom, looking at viewer, outdoors, masterpiece, best quality, very aesthetic, absurdres",
-                        "nsfw, lowres, (bad), text, error, fewer, extra, missing, worst quality, jpeg artifacts, low quality, watermark, unfinished, displeasing, oldest, early, chromatic aberration, signature, extra digits, artistic error, username, scan, [abstract]",
-                        1,
-                        30,
-                        7.5,
-                        True,
+                        "1girl, souryuu asuka langley, neon genesis evangelion, rebuild of evangelion, lance of longinus, cat hat, plugsuit, pilot suit, red bodysuit, sitting, crossed legs, black eye patch, throne, looking down, from bottom, looking at viewer, outdoors, (masterpiece), (best quality), (ultra-detailed), very aesthetic, illustration, disheveled hair, perfect composition, moist skin, intricate details",
+                        "nfsw, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, unfinished, very displeasing, oldest, early, chromatic aberration, artistic error, scan, abstract",
+                        28,
+                        7.0,
                         -1,
                         "None",
-                        1.0,
-                        "None",
-                        1.0,
-                        "None",
-                        1.0,                        
-                        "None",
-                        1.0,
-                        "None",
-                        1.0,
+                        0.33,
                         "Euler a",
                         1152,
                         896,
                         "cagliostrolab/animagine-xl-3.1",
-                        None, # vae
                         "txt2img",
-                        None, # img conttol
-                        "Canny", # preprocessor
-                        512, # preproc resolution
-                        1024, # img resolution
-                        None, # Style prompt
-                        None, # Style json
-                        None, # img Mask
-                        0.35, # strength
-                        100, # low th canny
-                        200, # high th canny
-                        0.1, # value mstd
-                        0.1, # distance mstd
-                        1.0, # cn scale
-                        0., # cn start
-                        1., # cn end
-                        False, # ti
+                        "image.webp",  # img conttol
+                        1024,  # img resolution
+                        0.35,  # strength
+                        1.0,  # cn scale
+                        0.0,  # cn start
+                        1.0,  # cn end
                         "Classic",
                         "Nearest",
                     ],
                     [
-                        "a tiny astronaut hatching from an egg on the moon",
+                        "a digital illustration of a movie poster titled 'Finding Emo', finding nemo parody poster, featuring a depressed cartoon clownfish with black emo hair, eyeliner, and piercings, bored expression, swimming in a dark underwater scene, in the background, movie title in a dripping, grungy font, moody blue and purple color palette",
                         "",
-                        1,
-                        28,
+                        25,
                         3.5,
-                        True,
                         -1,
                         "None",
-                        1.0,
-                        "None",
-                        1.0,
-                        "None",
-                        1.0,
-                        "None",
-                        1.0,
-                        "None",
-                        1.0,
+                        0.33,
                         "Euler a",
-                        1024,
-                        1024,
+                        1152,
+                        896,
                         "black-forest-labs/FLUX.1-dev",
-                        None, # vae
                         "txt2img",
-                        None, # img conttol
-                        "Canny", # preprocessor
-                        512, # preproc resolution
-                        1024, # img resolution
-                        None, # Style prompt
-                        None, # Style json
-                        None, # img Mask
-                        0.35, # strength
-                        100, # low th canny
-                        200, # high th canny
-                        0.1, # value mstd
-                        0.1, # distance mstd
-                        1.0, # cn scale
-                        0., # cn start
-                        1., # cn end
-                        False, # ti
+                        None,  # img conttol
+                        1024,  # img resolution
+                        0.35,  # strength
+                        1.0,  # cn scale
+                        0.0,  # cn start
+                        1.0,  # cn end
                         "Classic",
                         None,
                     ],
                     [
-                        "((masterpiece)), best quality, blonde disco girl, detailed face, realistic face, realistic hair, dynamic pose, pink pvc, intergalactic disco background, pastel lights, dynamic contrast, airbrush, fine detail, 70s vibe, midriff  ",
+                        "((masterpiece)), best quality, blonde disco girl, detailed face, realistic face, realistic hair, dynamic pose, pink pvc, intergalactic disco background, pastel lights, dynamic contrast, airbrush, fine detail, 70s vibe, midriff",
                         "(worst quality:1.2), (bad quality:1.2), (poor quality:1.2), (missing fingers:1.2), bad-artist-anime, bad-artist, bad-picture-chill-75v",
-                        1,
                         48,
                         3.5,
-                        True,
                         -1,
                         "None",
-                        1.0,
-                        "None",
-                        1.0,
-                        "None",
-                        1.0,                        
-                        "None",
-                        1.0,
-                        "None",
-                        1.0,
+                        0.33,
                         "DPM++ 2M SDE Lu",
                         1024,
                         1024,
                         "misri/epicrealismXL_v7FinalDestination",
-                        None, # vae
                         "canny ControlNet",
-                        "image.webp", # img conttol
-                        "Canny", # preprocessor
-                        1024, # preproc resolution
-                        1024, # img resolution
-                        None, # Style prompt
-                        None, # Style json
-                        None, # img Mask
-                        0.35, # strength
-                        100, # low th canny
-                        200, # high th canny
-                        0.1, # value mstd
-                        0.1, # distance mstd
-                        1.0, # cn scale
-                        0., # cn start
-                        1., # cn end
-                        False, # ti
+                        "image.webp",  # img conttol
+                        1024,  # img resolution
+                        0.35,  # strength
+                        1.0,  # cn scale
+                        0.0,  # cn start
+                        1.0,  # cn end
                         "Classic",
                         None,
                     ],
                     [
                         "cinematic scenery old city ruins",
                         "(worst quality, low quality, illustration, 3d, 2d, painting, cartoons, sketch), (illustration, 3d, 2d, painting, cartoons, sketch, blurry, film grain, noise), (low quality, worst quality:1.2)",
-                        1,
                         50,
-                        4.,
-                        True,
+                        4.0,
                         -1,
                         "None",
-                        1.0,
-                        "None",
-                        1.0,
-                        "None",
-                        1.0,                        
-                        "None",
-                        1.0,
-                        "None",
-                        1.0,
+                        0.33,
                         "Euler a",
                         1024,
                         1024,
                         "misri/juggernautXL_juggernautX",
-                        None, # vae
                         "optical pattern ControlNet",
-                        "spiral_no_transparent.png", # img conttol
-                        "Canny", # preprocessor
-                        512, # preproc resolution
-                        1024, # img resolution
-                        None, # Style prompt
-                        None, # Style json
-                        None, # img Mask
-                        0.35, # strength
-                        100, # low th canny
-                        200, # high th canny
-                        0.1, # value mstd
-                        0.1, # distance mstd
-                        1.0, # cn scale
-                        0.05, # cn start
-                        0.75, # cn end
-                        False, # ti
+                        "spiral_no_transparent.png",  # img conttol
+                        1024,  # img resolution
+                        0.35,  # strength
+                        1.0,  # cn scale
+                        0.05,  # cn start
+                        0.75,  # cn end
                         "Classic",
                         None,
                     ],
                     [
                         "black and white, line art, coloring drawing, clean line art, black strokes, no background, white, black, free lines, black scribbles, on paper, A blend of comic book art and lineart full of black and white color, masterpiece, high-resolution, trending on Pixiv fan box, palette knife, brush strokes, two-dimensional, planar vector, T-shirt design, stickers, and T-shirt design, vector art, fantasy art, Adobe Illustrator, hand-painted, digital painting, low polygon, soft lighting, aerial view, isometric style, retro aesthetics, 8K resolution, black sketch lines, monochrome, invert color",
                         "color, red, green, yellow, colored, duplicate, blurry, abstract, disfigured, deformed, animated, toy, figure, framed, 3d, bad art, poorly drawn, extra limbs, close up, b&w, weird colors, blurry, watermark, blur haze, 2 heads, long neck, watermark, elongated body, cropped image, out of frame, draft, deformed hands, twisted fingers, double image, malformed hands, multiple heads, extra limb, ugly, poorly drawn hands, missing limb, cut-off, over satured, grain, lowères, bad anatomy, poorly drawn face, mutation, mutated, floating limbs, disconnected limbs, out of focus, long body, disgusting, extra fingers, groos proportions, missing arms, mutated hands, cloned face, missing legs, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, grainy, signature, cut off, draft, deformed, blurry, bad anatomy, disfigured, poorly drawn face, mutation, bluelish, blue",
-                        1,
                         20,
-                        4.,
-                        True,
+                        4.0,
                         -1,
                         "loras/Coloring_book_-_LineArt.safetensors",
-                        1.0,
-                        "None",
-                        1.0,
-                        "None",
-                        1.0,                        
-                        "None",
-                        1.0,
-                        "None",
                         1.0,
                         "DPM++ 2M SDE Karras",
                         1024,
                         1024,
                         "cagliostrolab/animagine-xl-3.1",
-                        None, # vae
                         "lineart ControlNet",
-                        "color_image.png", # img conttol
-                        "Lineart", # preprocessor
-                        512, # preproc resolution
-                        896, # img resolution
-                        None, # Style prompt
-                        None, # Style json
-                        None, # img Mask
-                        0.35, # strength
-                        100, # low th canny
-                        200, # high th canny
-                        0.1, # value mstd
-                        0.1, # distance mstd
-                        1.0, # cn scale
-                        0., # cn start
-                        1., # cn end
-                        False, # ti
+                        "color_image.png",  # img conttol
+                        896,  # img resolution
+                        0.35,  # strength
+                        1.0,  # cn scale
+                        0.0,  # cn start
+                        1.0,  # cn end
                         "Compel",
                         None,
                     ],
                     [
                         "1girl,face,curly hair,red hair,white background,",
                         "(worst quality:2),(low quality:2),(normal quality:2),lowres,watermark,",
-                        1,
                         38,
-                        5.,
-                        True,
+                        5.0,
                         -1,
                         "None",
-                        1.0,
-                        "None",
-                        1.0,
-                        "None",
-                        1.0,                        
-                        "None",
-                        1.0,
-                        "None",
-                        1.0,
+                        0.33,
                         "DPM++ 2M SDE Karras",
                         512,
                         512,
                         "digiplay/majicMIX_realistic_v7",
-                        None, # vae
                         "openpose ControlNet",
-                        "image.webp", # img conttol
-                        "Canny", # preprocessor
-                        512, # preproc resolution
-                        1024, # img resolution
-                        None, # Style prompt
-                        None, # Style json
-                        None, # img Mask
-                        0.35, # strength
-                        100, # low th canny
-                        200, # high th canny
-                        0.1, # value mstd
-                        0.1, # distance mstd
-                        1.0, # cn scale
-                        0., # cn start
-                        0.9, # cn end
-                        False, # ti
+                        "image.webp",  # img conttol
+                        1024,  # img resolution
+                        0.35,  # strength
+                        1.0,  # cn scale
+                        0.0,  # cn start
+                        0.9,  # cn end
                         "Compel",
-                        "Nearest",
+                        "Latent (antialiased)",
                     ],
                 ],
                 fn=sd_gen.generate_pipeline,
                 inputs=[
                     prompt_gui,
                     neg_prompt_gui,
-                    num_images_gui,
                     steps_gui,
                     cfg_gui,
-                    clip_skip_gui,
                     seed_gui,
                     lora1_gui,
                     lora_scale_1_gui,
-                    lora2_gui,
-                    lora_scale_2_gui,
-                    lora3_gui,
-                    lora_scale_3_gui,
-                    lora4_gui,
-                    lora_scale_4_gui,
-                    lora5_gui,
-                    lora_scale_5_gui,
                     sampler_gui,
                     img_height_gui,
                     img_width_gui,
                     model_name_gui,
-                    vae_model_gui,
                     task_gui,
                     image_control,
-                    preprocessor_name_gui,
-                    preprocess_resolution_gui,
                     image_resolution_gui,
-                    style_prompt_gui,
-                    style_json_gui,
-                    image_mask_gui,
                     strength_gui,
-                    low_threshold_gui,
-                    high_threshold_gui,
-                    value_threshold_gui,
-                    distance_threshold_gui,
                     control_net_output_scaling_gui,
                     control_net_start_threshold_gui,
                     control_net_stop_threshold_gui,
-                    active_textual_inversion_gui,
                     prompt_syntax_gui,
                     upscaler_model_path_gui,
                 ],
-                outputs=[result_images],
+                outputs=[result_images, actual_task_info],
                 cache_examples=False,
             )
 
@@ -1475,11 +1349,11 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     # enable crop (or disable it)
                     # transforms=["crop"],
                     brush=gr.Brush(
-                      default_size="16", # or leave it as 'auto'
-                      color_mode="fixed", # 'fixed' hides the user swatches and colorpicker, 'defaults' shows it
+                      default_size="16",  # or leave it as 'auto'
+                      color_mode="fixed",  # 'fixed' hides the user swatches and colorpicker, 'defaults' shows it
                       # default_color="black", # html names are supported
                       colors=[
-                        "rgba(0, 0, 0, 1)", # rgb(a)
+                        "rgba(0, 0, 0, 1)",  # rgb(a)
                         "rgba(0, 0, 0, 0.1)",
                         "rgba(255, 255, 255, 0.1)",
                         # "hsl(360, 120, 120)" # in fact any valid colorstring
@@ -1511,7 +1385,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
         queue=True,
         show_progress="minimal",
     ).success(
-        fn=sd_gen.generate_pipeline,
+        fn=sd_gen.generate_pipeline,  # fn=sd_gen_generate_pipeline,
         inputs=[
             prompt_gui,
             neg_prompt_gui,
