@@ -21,6 +21,7 @@ from stablepy import (
     SD15_TASKS,
     SDXL_TASKS,
 )
+import time
 # import urllib.parse
 
 # - **Download SD 1.5 Models**
@@ -86,6 +87,11 @@ load_diffusers_format_model = [
     'GraydientPlatformAPI/realcartoon3d-17',
     'GraydientPlatformAPI/realcartoon-pixar11',
     'GraydientPlatformAPI/realcartoon-real17',
+]
+
+DIFFUSERS_FORMAT_LORAS = [
+    "nerijs/animation2k-flux",
+    "XLabs-AI/flux-RealismLora",
 ]
 
 CIVITAI_API_KEY = os.environ.get("CIVITAI_API_KEY")
@@ -302,6 +308,7 @@ model_list = get_model_list(directory_models)
 model_list = load_diffusers_format_model + model_list
 lora_model_list = get_model_list(directory_loras)
 lora_model_list.insert(0, "None")
+lora_model_list = lora_model_list + DIFFUSERS_FORMAT_LORAS
 vae_model_list = get_model_list(directory_vaes)
 vae_model_list.insert(0, "None")
 
@@ -404,6 +411,7 @@ def get_my_lora(link_url):
             download_things(directory_loras, url, HF_TOKEN, CIVITAI_API_KEY)
     new_lora_model_list = get_model_list(directory_loras)
     new_lora_model_list.insert(0, "None")
+    new_lora_model_list = new_lora_model_list + DIFFUSERS_FORMAT_LORAS
 
     return gr.update(
         choices=new_lora_model_list
@@ -467,7 +475,7 @@ class GuiSD:
         if vae_model:
             vae_type = "SDXL" if "sdxl" in vae_model.lower() else "SD 1.5"
             if model_type != vae_type:
-                gr.Info(msg_inc_vae)
+                gr.Warning(msg_inc_vae)
 
         self.model.device = torch.device("cpu")
         dtype_model = torch.bfloat16 if model_type == "FLUX" else torch.float16
@@ -482,7 +490,7 @@ class GuiSD:
 
         yield f"Model loaded: {model_name}"
 
-    @spaces.GPU(duration=59)
+    # @spaces.GPU(duration=59)
     @torch.inference_mode()
     def generate_pipeline(
         self,
@@ -593,7 +601,7 @@ class GuiSD:
         vae_model = vae_model if vae_model != "None" else None
         loras_list = [lora1, lora2, lora3, lora4, lora5]
         vae_msg = f"VAE: {vae_model}" if vae_model else ""
-        msg_lora = []
+        msg_lora = ""
 
         print("Config model:", model_name, vae_model, loras_list)
 
@@ -756,11 +764,18 @@ class GuiSD:
         for img, seed, image_path, metadata in self.model(**pipe_params):
             info_state += ">"
             if image_path:
-                info_state = f"COMPLETED. Seeds: {str(seed)}"
+                info_state = f"COMPLETE. Seeds: {str(seed)}"
                 if vae_msg:
                     info_state = info_state + "<br>" + vae_msg
+
+                for status, lora in zip(self.model.lora_status, self.model.lora_memory):
+                    if status:
+                        msg_lora += f"<br>Loaded: {lora}"
+                    elif status is not None:
+                        msg_lora += f"<br>Error with: {lora}"
+
                 if msg_lora:
-                    info_state = info_state + "<br>" + "<br>".join(msg_lora)
+                    info_state += msg_lora
 
                 info_state = info_state + "<br>" + "GENERATION DATA:<br>" + "<br>-------<br>".join(metadata).replace("\n", "<br>") 
 
@@ -785,32 +800,90 @@ def update_task_options(model_name, task_name):
     return gr.update(value=task_name, choices=new_choices)
 
 
-# def sd_gen_generate_pipeline(*args):
+def dynamic_gpu_duration(func, duration, *args):
 
-#     # Load lora in CPU
-#     status_lora = sd_gen.model.lora_merge(
-#         lora_A=args[7] if args[7] != "None" else None, lora_scale_A=args[8],
-#         lora_B=args[9] if args[9] != "None" else None, lora_scale_B=args[10],
-#         lora_C=args[11] if args[11] != "None" else None, lora_scale_C=args[12],
-#         lora_D=args[13] if args[13] != "None" else None, lora_scale_D=args[14],
-#         lora_E=args[15] if args[15] != "None" else None, lora_scale_E=args[16],
-#     )
+    @spaces.GPU(duration=duration)
+    def wrapped_func():
+        yield from func(*args)
 
-#     lora_list = [args[7], args[9], args[11], args[13], args[15]]
-#     print(status_lora)
-#     for status, lora in zip(status_lora, lora_list):
-#         if status:
-#             gr.Info(f"LoRA loaded: {lora}")
-#         elif status is not None:
-#             gr.Warning(f"Failed to load LoRA: {lora}")
-
-#     # if status_lora == [None] * 5 and self.model.lora_memory != [None] * 5:
-#     #     gr.Info(f"LoRAs in cache: {", ".join(str(x) for x in self.model.lora_memory if x is not None)}")
-
-#     yield from sd_gen.generate_pipeline(*args)
+    return wrapped_func()
 
 
-# sd_gen_generate_pipeline.zerogpu = True
+@spaces.GPU
+def dummy_gpu():
+    return None
+
+
+def sd_gen_generate_pipeline(*args):
+
+    gpu_duration_arg = int(args[-1]) if args[-1] else 59
+    verbose_arg = int(args[-2])
+    load_lora_cpu = args[-3]
+    generation_args = args[:-3]
+    lora_list = [
+        None if item == "None" else item
+        for item in [args[7], args[9], args[11], args[13], args[15]]
+    ]
+    lora_status = [None] * 5
+
+    msg_load_lora = "Updating LoRAs in GPU..."
+    if load_lora_cpu:
+        msg_load_lora = "Updating LoRAs in CPU (Slow but saves GPU usage)..."
+
+    if lora_list != sd_gen.model.lora_memory and lora_list != [None] * 5:
+        yield None, msg_load_lora
+
+    # Load lora in CPU
+    if load_lora_cpu:
+        lora_status = sd_gen.model.lora_merge(
+            lora_A=lora_list[0], lora_scale_A=args[8],
+            lora_B=lora_list[1], lora_scale_B=args[10],
+            lora_C=lora_list[2], lora_scale_C=args[12],
+            lora_D=lora_list[3], lora_scale_D=args[14],
+            lora_E=lora_list[4], lora_scale_E=args[16],
+        )
+        print(lora_status)
+
+    if verbose_arg:
+        for status, lora in zip(lora_status, lora_list):
+            if status:
+                gr.Info(f"LoRA loaded in CPU: {lora}")
+            elif status is not None:
+                gr.Warning(f"Failed to load LoRA: {lora}")
+
+        if lora_status == [None] * 5 and sd_gen.model.lora_memory != [None] * 5 and load_lora_cpu:
+            lora_cache_msg = ", ".join(
+                str(x) for x in sd_gen.model.lora_memory if x is not None
+            )
+            gr.Info(f"LoRAs in cache: {lora_cache_msg}")
+
+        msg_request = f"Requesting {gpu_duration_arg}s. of GPU time"
+        gr.Info(msg_request)
+        print(msg_request)
+
+    # yield from sd_gen.generate_pipeline(*generation_args)
+
+    start_time = time.time()
+
+    yield from dynamic_gpu_duration(
+        sd_gen.generate_pipeline,
+        gpu_duration_arg,
+        *generation_args,
+    )
+
+    end_time = time.time()
+
+    if verbose_arg:
+        execution_time = end_time - start_time
+        msg_task_complete = (
+            f"GPU task complete in: {round(execution_time, 0) + 1} seconds"
+        )
+        gr.Info(msg_task_complete)
+        print(msg_task_complete)
+
+
+dynamic_gpu_duration.zerogpu = True
+sd_gen_generate_pipeline.zerogpu = True
 sd_gen = GuiSD()
 
 with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
@@ -853,6 +926,12 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 )
 
                 actual_task_info = gr.HTML()
+
+                with gr.Row(equal_height=False, variant="default"):
+                    gpu_duration_gui = gr.Number(minimum=5, maximum=240, value=59, show_label=False, container=False, info="GPU time duration (seconds)")
+                    with gr.Column():
+                        verbose_info_gui = gr.Checkbox(value=False, container=False, label="Status info")
+                        load_lora_cpu_gui = gr.Checkbox(value=False, container=False, label="Load LoRAs on CPU (Save GPU time)")
 
             with gr.Column(scale=1):
                 steps_gui = gr.Slider(minimum=1, maximum=100, step=1, value=30, label="Steps")
@@ -1172,6 +1251,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         1.0,  # cn end
                         "Classic",
                         "Nearest",
+                        45,
+                        False,
                     ],
                     [
                         "a digital illustration of a movie poster titled 'Finding Emo', finding nemo parody poster, featuring a depressed cartoon clownfish with black emo hair, eyeliner, and piercings, bored expression, swimming in a dark underwater scene, in the background, movie title in a dripping, grungy font, moody blue and purple color palette",
@@ -1194,6 +1275,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         1.0,  # cn end
                         "Classic",
                         None,
+                        70,
+                        True,
                     ],
                     [
                         "((masterpiece)), best quality, blonde disco girl, detailed face, realistic face, realistic hair, dynamic pose, pink pvc, intergalactic disco background, pastel lights, dynamic contrast, airbrush, fine detail, 70s vibe, midriff",
@@ -1216,6 +1299,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         1.0,  # cn end
                         "Classic",
                         None,
+                        44,
+                        False,
                     ],
                     [
                         "cinematic scenery old city ruins",
@@ -1238,6 +1323,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         0.75,  # cn end
                         "Classic",
                         None,
+                        35,
+                        False,
                     ],
                     [
                         "black and white, line art, coloring drawing, clean line art, black strokes, no background, white, black, free lines, black scribbles, on paper, A blend of comic book art and lineart full of black and white color, masterpiece, high-resolution, trending on Pixiv fan box, palette knife, brush strokes, two-dimensional, planar vector, T-shirt design, stickers, and T-shirt design, vector art, fantasy art, Adobe Illustrator, hand-painted, digital painting, low polygon, soft lighting, aerial view, isometric style, retro aesthetics, 8K resolution, black sketch lines, monochrome, invert color",
@@ -1260,6 +1347,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         1.0,  # cn end
                         "Compel",
                         None,
+                        35,
+                        False,
                     ],
                     [
                         "1girl,face,curly hair,red hair,white background,",
@@ -1282,6 +1371,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         0.9,  # cn end
                         "Compel",
                         "Latent (antialiased)",
+                        46,
+                        False,
                     ],
                 ],
                 fn=sd_gen.generate_pipeline,
@@ -1306,6 +1397,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     control_net_stop_threshold_gui,
                     prompt_syntax_gui,
                     upscaler_model_path_gui,
+                    gpu_duration_gui,
+                    load_lora_cpu_gui,
                 ],
                 outputs=[result_images, actual_task_info],
                 cache_examples=False,
@@ -1385,7 +1478,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
         queue=True,
         show_progress="minimal",
     ).success(
-        fn=sd_gen.generate_pipeline,  # fn=sd_gen_generate_pipeline,
+        fn=sd_gen_generate_pipeline,  # fn=sd_gen.generate_pipeline,
         inputs=[
             prompt_gui,
             neg_prompt_gui,
@@ -1489,6 +1582,9 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             mode_ip2,
             scale_ip2,
             pag_scale_gui,
+            load_lora_cpu_gui,
+            verbose_info_gui,
+            gpu_duration_gui,
         ],
         outputs=[result_images, actual_task_info],
         queue=True,
