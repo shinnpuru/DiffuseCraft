@@ -61,6 +61,9 @@ load_diffusers_format_model = [
     'GraydientPlatformAPI/realcartoon-pony-diffusion',
     'John6666/nova-anime-xl-pony-v5-sdxl',
     'John6666/autismmix-sdxl-autismmix-pony-sdxl',
+    'John6666/aimz-dream-real-pony-mix-v3-sdxl',
+    'John6666/duchaiten-pony-real-v11fix-sdxl',
+    'John6666/duchaiten-pony-real-v20-sdxl',
     'yodayo-ai/kivotos-xl-2.0',
     'yodayo-ai/holodayo-xl-2.1',
     'yodayo-ai/clandestine-xl-1.0',
@@ -104,14 +107,14 @@ PREPROCESSOR_CONTROLNET = {
   ],
   "scribble": [
     "HED",
-    "Pidinet",
+    "PidiNet",
     "None",
   ],
   "softedge": [
-    "Pidinet",
+    "PidiNet",
     "HED",
     "HED safe",
-    "Pidinet safe",
+    "PidiNet safe",
     "None",
   ],
   "segmentation": [
@@ -464,6 +467,7 @@ class GuiSD:
             retain_task_model_in_cache=False,
             device="cpu",
         )
+        self.model.load_beta_styles()
 
     def load_new_model(self, model_name, vae_model, task, progress=gr.Progress(track_tqdm=True)):
 
@@ -777,7 +781,7 @@ class GuiSD:
                 if msg_lora:
                     info_state += msg_lora
 
-                info_state = info_state + "<br>" + "GENERATION DATA:<br>" + "<br>-------<br>".join(metadata).replace("\n", "<br>") 
+                info_state = info_state + "<br>" + "GENERATION DATA:<br>" + metadata[0].replace("\n", "<br>") + "<br>-------<br>"
 
                 download_links = "<br>".join(
                     [
@@ -899,10 +903,10 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 prompt_gui = gr.Textbox(lines=5, placeholder="Enter prompt", label="Prompt")
                 neg_prompt_gui = gr.Textbox(lines=3, placeholder="Enter Neg prompt", label="Negative prompt")
                 with gr.Row(equal_height=False):
-                    set_params_gui = gr.Button(value="↙️")
-                    clear_prompt_gui = gr.Button(value="🗑️")
-                    set_random_seed = gr.Button(value="🎲")
-                generate_button = gr.Button(value="GENERATE", variant="primary")
+                    set_params_gui = gr.Button(value="↙️", variant="secondary", size="sm")
+                    clear_prompt_gui = gr.Button(value="🗑️", variant="secondary", size="sm")
+                    set_random_seed = gr.Button(value="🎲", variant="secondary", size="sm")
+                generate_button = gr.Button(value="GENERATE IMAGE", variant="primary")
 
                 model_name_gui.change(
                     update_task_options,
@@ -935,7 +939,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
 
             with gr.Column(scale=1):
                 steps_gui = gr.Slider(minimum=1, maximum=100, step=1, value=30, label="Steps")
-                cfg_gui = gr.Slider(minimum=0, maximum=30, step=0.5, value=7.5, label="CFG")
+                cfg_gui = gr.Slider(minimum=0, maximum=30, step=0.5, value=7., label="CFG")
                 sampler_gui = gr.Dropdown(label="Sampler", choices=scheduler_names, value="Euler a")
                 img_width_gui = gr.Slider(minimum=64, maximum=4096, step=8, value=1024, label="Img Width")
                 img_height_gui = gr.Slider(minimum=64, maximum=4096, step=8, value=1024, label="Img Height")
@@ -943,11 +947,11 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 pag_scale_gui = gr.Slider(minimum=0.0, maximum=10.0, step=0.1, value=0.0, label="PAG Scale")
                 with gr.Row():
                     clip_skip_gui = gr.Checkbox(value=True, label="Layer 2 Clip Skip")
-                    free_u_gui = gr.Checkbox(value=True, label="FreeU")
+                    free_u_gui = gr.Checkbox(value=False, label="FreeU")
 
                 with gr.Row(equal_height=False):
 
-                    def run_set_params_gui(base_prompt):
+                    def run_set_params_gui(base_prompt, name_model):
                         valid_receptors = {  # default values
                             "prompt": gr.update(value=base_prompt),
                             "neg_prompt": gr.update(value=""),
@@ -956,12 +960,14 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                             "height": gr.update(value=1024),
                             "Seed": gr.update(value=-1),
                             "Sampler": gr.update(value="Euler a"),
-                            "scale": gr.update(value=7.5),  # cfg
+                            "scale": gr.update(value=7.),  # cfg
                             "skip": gr.update(value=True),
+                            "Model": gr.update(value=name_model),
                         }
                         valid_keys = list(valid_receptors.keys())
 
                         parameters = extract_parameters(base_prompt)
+
                         for key, val in parameters.items():
                             # print(val)
                             if key in valid_keys:
@@ -969,6 +975,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                                     if val not in scheduler_names:
                                         continue
                                 elif key == "skip":
+                                    if "," in str(val):
+                                        val = val.replace(",", "")
                                     if int(val) >= 2:
                                         val = True
                                 if key == "prompt":
@@ -981,6 +989,12 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                                     val = int(val)
                                 if key == "scale":
                                     val = float(val)
+                                if key == "Model":
+                                    filtered_models = [m for m in model_list if val in m]
+                                    if filtered_models: 
+                                        val = filtered_models[0]
+                                    else:
+                                        val = name_model
                                 if key == "Seed":
                                     continue
                                 valid_receptors[key] = gr.update(value=val)
@@ -989,7 +1003,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         return [value for value in valid_receptors.values()]
 
                     set_params_gui.click(
-                        run_set_params_gui, [prompt_gui], [
+                        run_set_params_gui, [prompt_gui, model_name_gui], [
                             prompt_gui,
                             neg_prompt_gui,
                             steps_gui,
@@ -999,6 +1013,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                             sampler_gui,
                             cfg_gui,
                             clip_skip_gui,
+                            model_name_gui,
                         ],
                     )
 
@@ -1014,7 +1029,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         run_set_random_seed, [], seed_gui
                     )
 
-                num_images_gui = gr.Slider(minimum=1, maximum=4, step=1, value=1, label="Images")
+                num_images_gui = gr.Slider(minimum=1, maximum=5, step=1, value=1, label="Images")
                 prompt_s_options = [
                     ("Compel format: (word)weight", "Compel"),
                     ("Classic format: (word:weight)", "Classic"),
@@ -1024,7 +1039,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     ("None", "None"),
                 ]
                 prompt_syntax_gui = gr.Dropdown(label="Prompt Syntax", choices=prompt_s_options, value=prompt_s_options[1][1])
-                vae_model_gui = gr.Dropdown(label="VAE Model", choices=vae_model_list)
+                vae_model_gui = gr.Dropdown(label="VAE Model", choices=vae_model_list, value=vae_model_list[0])
 
                 with gr.Accordion("Hires fix", open=False, visible=True):
 
@@ -1116,7 +1131,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     control_net_start_threshold_gui = gr.Slider(minimum=0, maximum=1, step=0.01, value=0, label="ControlNet Start Threshold (%)")
                     control_net_stop_threshold_gui = gr.Slider(minimum=0, maximum=1, step=0.01, value=1, label="ControlNet Stop Threshold (%)")
 
-                with gr.Accordion("T2I adapter", open=False, visible=True):
+                with gr.Accordion("T2I adapter", open=False, visible=False):
                     t2i_adapter_preprocessor_gui = gr.Checkbox(value=True, label="T2i Adapter Preprocessor")
                     adapter_conditioning_scale_gui = gr.Slider(minimum=0, maximum=5., step=0.1, value=1, label="Adapter Conditioning Scale")
                     adapter_conditioning_factor_gui = gr.Slider(minimum=0, maximum=1., step=0.01, value=0.55, label="Adapter Conditioning Factor (%)")
@@ -1402,6 +1417,12 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 ],
                 outputs=[result_images, actual_task_info],
                 cache_examples=False,
+            )
+            gr.Markdown(
+                """### Resources
+                - John6666's space has some great features you might find helpful [link](https://huggingface.co/spaces/John6666/DiffuseCraftMod).
+                - You can also try the image generator in Colab’s free tier, which provides free GPU [link](https://github.com/R3gm/SD_diffusers_interactive).
+                """
             )
 
     with gr.Tab("Inpaint mask maker", render=True):
