@@ -24,6 +24,8 @@ from stablepy import (
 import time
 # import urllib.parse
 
+print(os.getenv("SPACES_ZERO_GPU"))
+
 # - **Download SD 1.5 Models**
 download_model = "https://civitai.com/api/download/models/574369, https://huggingface.co/TechnoByte/MilkyWonderland/resolve/main/milkyWonderland_v40.safetensors"
 # - **Download VAEs**
@@ -36,6 +38,8 @@ load_diffusers_format_model = [
     'John6666/blue-pencil-flux1-v021-fp8-flux',
     'John6666/wai-ani-flux-v10forfp8-fp8-flux',
     'John6666/xe-anime-flux-v04-fp8-flux',
+    'John6666/lyh-anime-flux-v2a1-fp8-flux',
+    'John6666/carnival-unchained-v10-fp8-flux',
     'cagliostrolab/animagine-xl-3.1',
     'John6666/epicrealism-xl-v8kiss-sdxl',
     'misri/epicrealismXL_v7FinalDestination',
@@ -52,12 +56,24 @@ load_diffusers_format_model = [
     'WhiteAiZ/autismmixSDXL_autismmixConfetti_diffusers',
     'kitty7779/ponyDiffusionV6XL',
     'GraydientPlatformAPI/aniverse-pony',
+    'John6666/ras-real-anime-screencap-v1-sdxl',
+    'John6666/duchaiten-pony-xl-no-score-v60-sdxl',
     'John6666/mistoon-anime-ponyalpha-sdxl',
+    'John6666/3x3x3mixxl-v2-sdxl',
+    'John6666/3x3x3mixxl-3dv01-sdxl',
     'John6666/ebara-mfcg-pony-mix-v12-sdxl',
     'John6666/t-ponynai3-v51-sdxl',
+    'John6666/t-ponynai3-v65-sdxl',
+    'John6666/prefect-pony-xl-v3-sdxl',
     'John6666/mala-anime-mix-nsfw-pony-xl-v5-sdxl',
     'John6666/wai-real-mix-v11-sdxl',
+    'John6666/wai-c-v6-sdxl',
+    'John6666/iniverse-mix-xl-sfwnsfw-pony-guofeng-v43-sdxl',
+    'John6666/photo-realistic-pony-v5-sdxl',
+    'John6666/pony-realism-v21main-sdxl',
+    'John6666/pony-realism-v22main-sdxl',
     'John6666/cyberrealistic-pony-v63-sdxl',
+    'John6666/cyberrealistic-pony-v64-sdxl',
     'GraydientPlatformAPI/realcartoon-pony-diffusion',
     'John6666/nova-anime-xl-pony-v5-sdxl',
     'John6666/autismmix-sdxl-autismmix-pony-sdxl',
@@ -373,18 +389,21 @@ def extract_parameters(input_string):
     input_string = input_string.replace("\n", "")
 
     if "Negative prompt:" not in input_string:
-        print("Negative prompt not detected")
-        parameters["prompt"] = input_string
-        return parameters
+        if "Steps:" in input_string:
+            input_string = input_string.replace("Steps:", "Negative prompt: Steps:")
+        else:
+            print("Invalid metadata")
+            parameters["prompt"] = input_string
+            return parameters
 
     parm = input_string.split("Negative prompt:")
-    parameters["prompt"] = parm[0]
+    parameters["prompt"] = parm[0].strip()
     if "Steps:" not in parm[1]:
         print("Steps not detected")
-        parameters["neg_prompt"] = parm[1]
+        parameters["neg_prompt"] = parm[1].strip()
         return parameters
     parm = parm[1].split("Steps:")
-    parameters["neg_prompt"] = parm[0]
+    parameters["neg_prompt"] = parm[0].strip()
     input_string = "Steps:" + parm[1]
 
     # Extracting Steps
@@ -971,35 +990,38 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         for key, val in parameters.items():
                             # print(val)
                             if key in valid_keys:
-                                if key == "Sampler":
-                                    if val not in scheduler_names:
+                                try:
+                                    if key == "Sampler":
+                                        if val not in scheduler_names:
+                                            continue
+                                    elif key == "skip":
+                                        if "," in str(val):
+                                            val = val.replace(",", "")
+                                        if int(val) >= 2:
+                                            val = True
+                                    if key == "prompt":
+                                        if ">" in val and "<" in val:
+                                            val = re.sub(r'<[^>]+>', '', val)
+                                            print("Removed LoRA written in the prompt")
+                                    if key in ["prompt", "neg_prompt"]:
+                                        val = re.sub(r'\s+', ' ', re.sub(r',+', ',', val)).strip()
+                                    if key in ["Steps", "width", "height", "Seed"]:
+                                        val = int(val)
+                                    if key == "scale":
+                                        val = float(val)
+                                    if key == "Model":
+                                        filtered_models = [m for m in model_list if val in m]
+                                        if filtered_models:
+                                            val = filtered_models[0]
+                                        else:
+                                            val = name_model
+                                    if key == "Seed":
                                         continue
-                                elif key == "skip":
-                                    if "," in str(val):
-                                        val = val.replace(",", "")
-                                    if int(val) >= 2:
-                                        val = True
-                                if key == "prompt":
-                                    if ">" in val and "<" in val:
-                                        val = re.sub(r'<[^>]+>', '', val)
-                                        print("Removed LoRA written in the prompt")
-                                if key in ["prompt", "neg_prompt"]:
-                                    val = val.strip()
-                                if key in ["Steps", "width", "height", "Seed"]:
-                                    val = int(val)
-                                if key == "scale":
-                                    val = float(val)
-                                if key == "Model":
-                                    filtered_models = [m for m in model_list if val in m]
-                                    if filtered_models: 
-                                        val = filtered_models[0]
-                                    else:
-                                        val = name_model
-                                if key == "Seed":
-                                    continue
-                                valid_receptors[key] = gr.update(value=val)
-                                # print(val, type(val))
-                                # print(valid_receptors)
+                                    valid_receptors[key] = gr.update(value=val)
+                                    # print(val, type(val))
+                                    # print(valid_receptors)
+                                except Exception as e:
+                                    print(str(e))
                         return [value for value in valid_receptors.values()]
 
                     set_params_gui.click(
@@ -1272,7 +1294,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     [
                         "a digital illustration of a movie poster titled 'Finding Emo', finding nemo parody poster, featuring a depressed cartoon clownfish with black emo hair, eyeliner, and piercings, bored expression, swimming in a dark underwater scene, in the background, movie title in a dripping, grungy font, moody blue and purple color palette",
                         "",
-                        25,
+                        24,
                         3.5,
                         -1,
                         "None",
@@ -1456,7 +1478,6 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
 
         with gr.Row():
             with gr.Column(scale=2):
-                # image_base = gr.ImageEditor(label="Base image", show_label=True, brush=gr.Brush(colors=["#000000"]))
                 image_base = gr.ImageEditor(
                     sources=["upload", "clipboard"],
                     # crop_size="1:1",
@@ -1487,6 +1508,35 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             def send_img(img_source, img_result):
                 return img_source, img_result
             btn_send.click(send_img, [img_source, img_result], [image_control, image_mask_gui])
+
+    with gr.Tab("PNG Info"):
+        def extract_exif_data(image):
+            if image is None: return ""
+
+            try:
+                metadata_keys = ['parameters', 'metadata', 'prompt', 'Comment']
+
+                for key in metadata_keys:
+                    if key in image.info:
+                        return image.info[key]
+
+                return str(image.info)
+
+            except Exception as e:
+                return f"Error extracting metadata: {str(e)}"
+
+        with gr.Row():
+            with gr.Column():
+                image_metadata = gr.Image(label="Image with metadata", type="pil", sources=["upload"])
+
+            with gr.Column():
+                result_metadata = gr.Textbox(label="Metadata", show_label=True, show_copy_button=True, interactive=False, container=True, max_lines=99)
+
+                image_metadata.change(
+                    fn=extract_exif_data,
+                    inputs=[image_metadata],
+                    outputs=[result_metadata],
+                )
 
     generate_button.click(
         fn=sd_gen.load_new_model,
