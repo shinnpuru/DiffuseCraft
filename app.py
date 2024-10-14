@@ -22,8 +22,10 @@ from stablepy import (
     SDXL_TASKS,
 )
 import time
+from PIL import ImageFile
 # import urllib.parse
 
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 print(os.getenv("SPACES_ZERO_GPU"))
 
 # - **Download SD 1.5 Models**
@@ -905,6 +907,45 @@ def sd_gen_generate_pipeline(*args):
         print(msg_task_complete)
 
 
+def extract_exif_data(image):
+    if image is None: return ""
+
+    try:
+        metadata_keys = ['parameters', 'metadata', 'prompt', 'Comment']
+
+        for key in metadata_keys:
+            if key in image.info:
+                return image.info[key]
+
+        return str(image.info)
+
+    except Exception as e:
+        return f"Error extracting metadata: {str(e)}"
+
+
+@spaces.GPU(duration=20)
+def esrgan_upscale(image, upscaler_name, upscaler_size):
+    if image is None: return None
+
+    from stablepy.diffusers_vanilla.utils import save_pil_image_with_metadata
+    from stablepy import UpscalerESRGAN
+
+    exif_image = extract_exif_data(image)
+
+    url_upscaler = UPSCALER_DICT_GUI[upscaler_name]
+    directory_upscalers = 'upscalers'
+    os.makedirs(directory_upscalers, exist_ok=True)
+    if not os.path.exists(f"./upscalers/{url_upscaler.split('/')[-1]}"):
+        download_things(directory_upscalers, url_upscaler, HF_TOKEN)
+
+    scaler_beta = UpscalerESRGAN(0, 0)
+    image_up = scaler_beta.upscale(image, upscaler_size, f"./upscalers/{url_upscaler.split('/')[-1]}")
+
+    image_path = save_pil_image_with_metadata(image_up, f'{os.getcwd()}/up_images', exif_image)
+
+    return image_path
+
+
 dynamic_gpu_duration.zerogpu = True
 sd_gen_generate_pipeline.zerogpu = True
 sd_gen = GuiSD()
@@ -1066,9 +1107,9 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 with gr.Accordion("Hires fix", open=False, visible=True):
 
                     upscaler_model_path_gui = gr.Dropdown(label="Upscaler", choices=UPSCALER_KEYS, value=UPSCALER_KEYS[0])
-                    upscaler_increases_size_gui = gr.Slider(minimum=1.1, maximum=6., step=0.1, value=1.4, label="Upscale by")
-                    esrgan_tile_gui = gr.Slider(minimum=0, value=100, maximum=500, step=1, label="ESRGAN Tile")
-                    esrgan_tile_overlap_gui = gr.Slider(minimum=1, maximum=200, step=1, value=10, label="ESRGAN Tile Overlap")
+                    upscaler_increases_size_gui = gr.Slider(minimum=1.1, maximum=4., step=0.1, value=1.2, label="Upscale by")
+                    esrgan_tile_gui = gr.Slider(minimum=0, value=0, maximum=500, step=1, label="ESRGAN Tile")
+                    esrgan_tile_overlap_gui = gr.Slider(minimum=1, maximum=200, step=1, value=8, label="ESRGAN Tile Overlap")
                     hires_steps_gui = gr.Slider(minimum=0, value=30, maximum=100, step=1, label="Hires Steps")
                     hires_denoising_strength_gui = gr.Slider(minimum=0.1, maximum=1.0, step=0.01, value=0.55, label="Hires Denoising Strength")
                     hires_sampler_gui = gr.Dropdown(label="Hires Sampler", choices=POST_PROCESSING_SAMPLER, value=POST_PROCESSING_SAMPLER[0])
@@ -1510,20 +1551,6 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             btn_send.click(send_img, [img_source, img_result], [image_control, image_mask_gui])
 
     with gr.Tab("PNG Info"):
-        def extract_exif_data(image):
-            if image is None: return ""
-
-            try:
-                metadata_keys = ['parameters', 'metadata', 'prompt', 'Comment']
-
-                for key in metadata_keys:
-                    if key in image.info:
-                        return image.info[key]
-
-                return str(image.info)
-
-            except Exception as e:
-                return f"Error extracting metadata: {str(e)}"
 
         with gr.Row():
             with gr.Column():
@@ -1536,6 +1563,24 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     fn=extract_exif_data,
                     inputs=[image_metadata],
                     outputs=[result_metadata],
+                )
+
+    with gr.Tab("Upscaler"):
+
+        with gr.Row():
+            with gr.Column():
+                image_up_tab = gr.Image(label="Image", type="pil", sources=["upload"])
+                upscaler_tab = gr.Dropdown(label="Upscaler", choices=UPSCALER_KEYS[9:], value=UPSCALER_KEYS[11])
+                upscaler_size_tab = gr.Slider(minimum=1., maximum=4., step=0.1, value=1.1, label="Upscale by")
+                generate_button_up_tab = gr.Button(value="START UPSCALE", variant="primary")
+
+            with gr.Column():
+                result_up_tab = gr.Image(label="Result", type="pil", interactive=False, format="png")
+
+                generate_button_up_tab.click(
+                    fn=esrgan_upscale,
+                    inputs=[image_up_tab, upscaler_tab, upscaler_size_tab],
+                    outputs=[result_up_tab],
                 )
 
     generate_button.click(
