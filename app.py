@@ -1,336 +1,97 @@
 import spaces
 import os
 from stablepy import Model_Diffusers
+from constants import (
+    DIRECTORY_MODELS,
+    DIRECTORY_LORAS,
+    DIRECTORY_VAES,
+    DIRECTORY_EMBEDS,
+    DOWNLOAD_MODEL,
+    DOWNLOAD_VAE,
+    DOWNLOAD_LORA,
+    LOAD_DIFFUSERS_FORMAT_MODEL,
+    DIFFUSERS_FORMAT_LORAS,
+    DOWNLOAD_EMBEDS,
+    CIVITAI_API_KEY,
+    HF_TOKEN,
+    PREPROCESSOR_CONTROLNET,
+    TASK_STABLEPY,
+    TASK_MODEL_LIST,
+    UPSCALER_DICT_GUI,
+    UPSCALER_KEYS,
+    PROMPT_W_OPTIONS,
+    WARNING_MSG_VAE,
+    SDXL_TASK,
+    MODEL_TYPE_TASK,
+    POST_PROCESSING_SAMPLER,
+    SUBTITLE_GUI,
+    HELP_GUI,
+    EXAMPLES_GUI_HELP,
+    EXAMPLES_GUI,
+    RESOURCES,
+)
 from stablepy.diffusers_vanilla.style_prompt_config import STYLE_NAMES
-from stablepy.diffusers_vanilla.constants import FLUX_CN_UNION_MODES
 import torch
 import re
-from huggingface_hub import HfApi
 from stablepy import (
-    CONTROLNET_MODEL_IDS,
-    VALID_TASKS,
-    T2I_PREPROCESSOR_NAME,
-    FLASH_LORA,
-    SCHEDULER_CONFIG_MAP,
     scheduler_names,
-    IP_ADAPTER_MODELS,
     IP_ADAPTERS_SD,
     IP_ADAPTERS_SDXL,
-    REPO_IMAGE_ENCODER,
-    ALL_PROMPT_WEIGHT_OPTIONS,
-    SD15_TASKS,
-    SDXL_TASKS,
 )
 import time
 from PIL import ImageFile
+from utils import (
+    download_things,
+    get_model_list,
+    extract_parameters,
+    get_my_lora,
+    get_model_type,
+    extract_exif_data,
+    create_mask_now,
+    download_diffuser_repo,
+    progress_step_bar,
+    html_template_message,
+)
+from datetime import datetime
+import gradio as gr
+import logging
+import diffusers
+import warnings
+from stablepy import logger
 # import urllib.parse
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+# os.environ["PYTORCH_NO_CUDA_MEMORY_CACHING"] = "1"
 print(os.getenv("SPACES_ZERO_GPU"))
 
-# - **Download SD 1.5 Models**
-download_model = "https://civitai.com/api/download/models/574369, https://huggingface.co/TechnoByte/MilkyWonderland/resolve/main/milkyWonderland_v40.safetensors"
-# - **Download VAEs**
-download_vae = "https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-c-1.1-b-0.5.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-blessed.safetensors?download=true, https://huggingface.co/digiplay/VAE/resolve/main/vividReal_v20.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true"
-# - **Download LoRAs**
-download_lora = "https://civitai.com/api/download/models/28907, https://huggingface.co/Leopain/color/resolve/main/Coloring_book_-_LineArt.safetensors, https://civitai.com/api/download/models/135867, https://civitai.com/api/download/models/145907, https://huggingface.co/Linaqruf/anime-detailer-xl-lora/resolve/main/anime-detailer-xl.safetensors?download=true, https://huggingface.co/Linaqruf/style-enhancer-xl-lora/resolve/main/style-enhancer-xl.safetensors?download=true, https://civitai.com/api/download/models/28609, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SD15-8steps-CFG-lora.safetensors?download=true, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SDXL-8steps-CFG-lora.safetensors?download=true"
-load_diffusers_format_model = [
-    'stabilityai/stable-diffusion-xl-base-1.0',
-    'black-forest-labs/FLUX.1-dev',
-    'John6666/blue-pencil-flux1-v021-fp8-flux',
-    'John6666/wai-ani-flux-v10forfp8-fp8-flux',
-    'John6666/xe-anime-flux-v04-fp8-flux',
-    'John6666/lyh-anime-flux-v2a1-fp8-flux',
-    'John6666/carnival-unchained-v10-fp8-flux',
-    'cagliostrolab/animagine-xl-3.1',
-    'John6666/epicrealism-xl-v8kiss-sdxl',
-    'misri/epicrealismXL_v7FinalDestination',
-    'misri/juggernautXL_juggernautX',
-    'misri/zavychromaxl_v80',
-    'SG161222/RealVisXL_V4.0',
-    'SG161222/RealVisXL_V5.0',
-    'misri/newrealityxlAllInOne_Newreality40',
-    'eienmojiki/Anything-XL',
-    'eienmojiki/Starry-XL-v5.2',
-    'gsdf/CounterfeitXL',
-    'KBlueLeaf/Kohaku-XL-Zeta',
-    'John6666/silvermoon-mix-01xl-v11-sdxl',
-    'WhiteAiZ/autismmixSDXL_autismmixConfetti_diffusers',
-    'kitty7779/ponyDiffusionV6XL',
-    'GraydientPlatformAPI/aniverse-pony',
-    'John6666/ras-real-anime-screencap-v1-sdxl',
-    'John6666/duchaiten-pony-xl-no-score-v60-sdxl',
-    'John6666/mistoon-anime-ponyalpha-sdxl',
-    'John6666/3x3x3mixxl-v2-sdxl',
-    'John6666/3x3x3mixxl-3dv01-sdxl',
-    'John6666/ebara-mfcg-pony-mix-v12-sdxl',
-    'John6666/t-ponynai3-v51-sdxl',
-    'John6666/t-ponynai3-v65-sdxl',
-    'John6666/prefect-pony-xl-v3-sdxl',
-    'John6666/mala-anime-mix-nsfw-pony-xl-v5-sdxl',
-    'John6666/wai-real-mix-v11-sdxl',
-    'John6666/wai-c-v6-sdxl',
-    'John6666/iniverse-mix-xl-sfwnsfw-pony-guofeng-v43-sdxl',
-    'John6666/photo-realistic-pony-v5-sdxl',
-    'John6666/pony-realism-v21main-sdxl',
-    'John6666/pony-realism-v22main-sdxl',
-    'John6666/cyberrealistic-pony-v63-sdxl',
-    'John6666/cyberrealistic-pony-v64-sdxl',
-    'GraydientPlatformAPI/realcartoon-pony-diffusion',
-    'John6666/nova-anime-xl-pony-v5-sdxl',
-    'John6666/autismmix-sdxl-autismmix-pony-sdxl',
-    'John6666/aimz-dream-real-pony-mix-v3-sdxl',
-    'John6666/duchaiten-pony-real-v11fix-sdxl',
-    'John6666/duchaiten-pony-real-v20-sdxl',
-    'yodayo-ai/kivotos-xl-2.0',
-    'yodayo-ai/holodayo-xl-2.1',
-    'yodayo-ai/clandestine-xl-1.0',
-    'digiplay/majicMIX_sombre_v2',
-    'digiplay/majicMIX_realistic_v6',
-    'digiplay/majicMIX_realistic_v7',
-    'digiplay/DreamShaper_8',
-    'digiplay/BeautifulArt_v1',
-    'digiplay/DarkSushi2.5D_v1',
-    'digiplay/darkphoenix3D_v1.1',
-    'digiplay/BeenYouLiteL11_diffusers',
-    'Yntec/RevAnimatedV2Rebirth',
-    'youknownothing/cyberrealistic_v50',
-    'youknownothing/deliberate-v6',
-    'GraydientPlatformAPI/deliberate-cyber3',
-    'GraydientPlatformAPI/picx-real',
-    'GraydientPlatformAPI/perfectworld6',
-    'emilianJR/epiCRealism',
-    'votepurchase/counterfeitV30_v30',
-    'votepurchase/ChilloutMix',
-    'Meina/MeinaMix_V11',
-    'Meina/MeinaUnreal_V5',
-    'Meina/MeinaPastel_V7',
-    'GraydientPlatformAPI/realcartoon3d-17',
-    'GraydientPlatformAPI/realcartoon-pixar11',
-    'GraydientPlatformAPI/realcartoon-real17',
-]
-
-DIFFUSERS_FORMAT_LORAS = [
-    "nerijs/animation2k-flux",
-    "XLabs-AI/flux-RealismLora",
-]
-
-CIVITAI_API_KEY = os.environ.get("CIVITAI_API_KEY")
-HF_TOKEN = os.environ.get("HF_READ_TOKEN")
-
-PREPROCESSOR_CONTROLNET = {
-  "openpose": [
-    "Openpose",
-    "None",
-  ],
-  "scribble": [
-    "HED",
-    "PidiNet",
-    "None",
-  ],
-  "softedge": [
-    "PidiNet",
-    "HED",
-    "HED safe",
-    "PidiNet safe",
-    "None",
-  ],
-  "segmentation": [
-    "UPerNet",
-    "None",
-  ],
-  "depth": [
-    "DPT",
-    "Midas",
-    "None",
-  ],
-  "normalbae": [
-    "NormalBae",
-    "None",
-  ],
-  "lineart": [
-    "Lineart",
-    "Lineart coarse",
-    "Lineart (anime)",
-    "None",
-    "None (anime)",
-  ],
-  "lineart_anime": [
-    "Lineart",
-    "Lineart coarse",
-    "Lineart (anime)",
-    "None",
-    "None (anime)",
-  ],
-  "shuffle": [
-    "ContentShuffle",
-    "None",
-  ],
-  "canny": [
-    "Canny",
-    "None",
-  ],
-  "mlsd": [
-    "MLSD",
-    "None",
-  ],
-  "ip2p": [
-    "ip2p"
-  ],
-  "recolor": [
-    "Recolor luminance",
-    "Recolor intensity",
-    "None",
-  ],
-  "tile": [
-    "Mild Blur",
-    "Moderate Blur",
-    "Heavy Blur",
-    "None",
-  ],
-
-}
-
-TASK_STABLEPY = {
-    'txt2img': 'txt2img',
-    'img2img': 'img2img',
-    'inpaint': 'inpaint',
-    # 'canny T2I Adapter': 'sdxl_canny_t2i',  # NO HAVE STEP CALLBACK PARAMETERS SO NOT WORKS WITH DIFFUSERS 0.29.0
-    # 'sketch  T2I Adapter': 'sdxl_sketch_t2i',
-    # 'lineart  T2I Adapter': 'sdxl_lineart_t2i',
-    # 'depth-midas  T2I Adapter': 'sdxl_depth-midas_t2i',
-    # 'openpose  T2I Adapter': 'sdxl_openpose_t2i',
-    'openpose ControlNet': 'openpose',
-    'canny ControlNet': 'canny',
-    'mlsd ControlNet': 'mlsd',
-    'scribble ControlNet': 'scribble',
-    'softedge ControlNet': 'softedge',
-    'segmentation ControlNet': 'segmentation',
-    'depth ControlNet': 'depth',
-    'normalbae ControlNet': 'normalbae',
-    'lineart ControlNet': 'lineart',
-    'lineart_anime ControlNet': 'lineart_anime',
-    'shuffle ControlNet': 'shuffle',
-    'ip2p ControlNet': 'ip2p',
-    'optical pattern ControlNet': 'pattern',
-    'recolor ControlNet': 'recolor',
-    'tile ControlNet': 'tile',
-}
-
-TASK_MODEL_LIST = list(TASK_STABLEPY.keys())
-
-UPSCALER_DICT_GUI = {
-    None: None,
-    "Lanczos": "Lanczos",
-    "Nearest": "Nearest",
-    'Latent': 'Latent',
-    'Latent (antialiased)': 'Latent (antialiased)',
-    'Latent (bicubic)': 'Latent (bicubic)',
-    'Latent (bicubic antialiased)': 'Latent (bicubic antialiased)',
-    'Latent (nearest)': 'Latent (nearest)',
-    'Latent (nearest-exact)': 'Latent (nearest-exact)',
-    "RealESRGAN_x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
-    "RealESRNet_x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.1/RealESRNet_x4plus.pth",
-    "RealESRGAN_x4plus_anime_6B": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
-    "RealESRGAN_x2plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth",
-    "realesr-animevideov3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-animevideov3.pth",
-    "realesr-general-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-x4v3.pth",
-    "realesr-general-wdn-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-wdn-x4v3.pth",
-    "4x-UltraSharp": "https://huggingface.co/Shandypur/ESRGAN-4x-UltraSharp/resolve/main/4x-UltraSharp.pth",
-    "4x_foolhardy_Remacri": "https://huggingface.co/FacehugmanIII/4x_foolhardy_Remacri/resolve/main/4x_foolhardy_Remacri.pth",
-    "Remacri4xExtraSmoother": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/Remacri%204x%20ExtraSmoother.pth",
-    "AnimeSharp4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/AnimeSharp%204x.pth",
-    "lollypop": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/lollypop.pth",
-    "RealisticRescaler4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/RealisticRescaler%204x.pth",
-    "NickelbackFS4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/NickelbackFS%204x.pth"
-}
-
-UPSCALER_KEYS = list(UPSCALER_DICT_GUI.keys())
-
-
-def download_things(directory, url, hf_token="", civitai_api_key=""):
-    url = url.strip()
-
-    if "drive.google.com" in url:
-        original_dir = os.getcwd()
-        os.chdir(directory)
-        os.system(f"gdown --fuzzy {url}")
-        os.chdir(original_dir)
-    elif "huggingface.co" in url:
-        url = url.replace("?download=true", "")
-        # url = urllib.parse.quote(url, safe=':/')  # fix encoding
-        if "/blob/" in url:
-            url = url.replace("/blob/", "/resolve/")
-        user_header = f'"Authorization: Bearer {hf_token}"'
-        if hf_token:
-            os.system(f"aria2c --console-log-level=error --summary-interval=10 --header={user_header} -c -x 16 -k 1M -s 16 {url} -d {directory}  -o {url.split('/')[-1]}")
-        else:
-            os.system(f"aria2c --optimize-concurrent-downloads --console-log-level=error --summary-interval=10 -c -x 16 -k 1M -s 16 {url} -d {directory}  -o {url.split('/')[-1]}")
-    elif "civitai.com" in url:
-        if "?" in url:
-            url = url.split("?")[0]
-        if civitai_api_key:
-            url = url + f"?token={civitai_api_key}"
-            os.system(f"aria2c --console-log-level=error --summary-interval=10 -c -x 16 -k 1M -s 16 -d {directory} {url}")
-        else:
-            print("\033[91mYou need an API key to download Civitai models.\033[0m")
-    else:
-        os.system(f"aria2c --console-log-level=error --summary-interval=10 -c -x 16 -k 1M -s 16 -d {directory} {url}")
-
-
-def get_model_list(directory_path):
-    model_list = []
-    valid_extensions = {'.ckpt', '.pt', '.pth', '.safetensors', '.bin'}
-
-    for filename in os.listdir(directory_path):
-        if os.path.splitext(filename)[1] in valid_extensions:
-            # name_without_extension = os.path.splitext(filename)[0]
-            file_path = os.path.join(directory_path, filename)
-            # model_list.append((name_without_extension, file_path))
-            model_list.append(file_path)
-            print('\033[34mFILE: ' + file_path + '\033[0m')
-    return model_list
-
-
-directory_models = 'models'
-os.makedirs(directory_models, exist_ok=True)
-directory_loras = 'loras'
-os.makedirs(directory_loras, exist_ok=True)
-directory_vaes = 'vaes'
-os.makedirs(directory_vaes, exist_ok=True)
+directories = [DIRECTORY_MODELS, DIRECTORY_LORAS, DIRECTORY_VAES, DIRECTORY_EMBEDS]
+for directory in directories:
+    os.makedirs(directory, exist_ok=True)
 
 # Download stuffs
-for url in [url.strip() for url in download_model.split(',')]:
+for url in [url.strip() for url in DOWNLOAD_MODEL.split(',')]:
     if not os.path.exists(f"./models/{url.split('/')[-1]}"):
-        download_things(directory_models, url, HF_TOKEN, CIVITAI_API_KEY)
-for url in [url.strip() for url in download_vae.split(',')]:
+        download_things(DIRECTORY_MODELS, url, HF_TOKEN, CIVITAI_API_KEY)
+for url in [url.strip() for url in DOWNLOAD_VAE.split(',')]:
     if not os.path.exists(f"./vaes/{url.split('/')[-1]}"):
-        download_things(directory_vaes, url, HF_TOKEN, CIVITAI_API_KEY)
-for url in [url.strip() for url in download_lora.split(',')]:
+        download_things(DIRECTORY_VAES, url, HF_TOKEN, CIVITAI_API_KEY)
+for url in [url.strip() for url in DOWNLOAD_LORA.split(',')]:
     if not os.path.exists(f"./loras/{url.split('/')[-1]}"):
-        download_things(directory_loras, url, HF_TOKEN, CIVITAI_API_KEY)
+        download_things(DIRECTORY_LORAS, url, HF_TOKEN, CIVITAI_API_KEY)
 
 # Download Embeddings
-directory_embeds = 'embedings'
-os.makedirs(directory_embeds, exist_ok=True)
-download_embeds = [
-    'https://huggingface.co/datasets/Nerfgun3/bad_prompt/blob/main/bad_prompt_version2.pt',
-    'https://huggingface.co/embed/negative/resolve/main/EasyNegativeV2.safetensors',
-    'https://huggingface.co/embed/negative/resolve/main/bad-hands-5.pt',
-    ]
-
-for url_embed in download_embeds:
+for url_embed in DOWNLOAD_EMBEDS:
     if not os.path.exists(f"./embedings/{url_embed.split('/')[-1]}"):
-        download_things(directory_embeds, url_embed, HF_TOKEN, CIVITAI_API_KEY)
+        download_things(DIRECTORY_EMBEDS, url_embed, HF_TOKEN, CIVITAI_API_KEY)
 
 # Build list models
-embed_list = get_model_list(directory_embeds)
-model_list = get_model_list(directory_models)
-model_list = load_diffusers_format_model + model_list
-lora_model_list = get_model_list(directory_loras)
+embed_list = get_model_list(DIRECTORY_EMBEDS)
+model_list = get_model_list(DIRECTORY_MODELS)
+model_list = LOAD_DIFFUSERS_FORMAT_MODEL + model_list
+lora_model_list = get_model_list(DIRECTORY_LORAS)
 lora_model_list.insert(0, "None")
 lora_model_list = lora_model_list + DIFFUSERS_FORMAT_LORAS
-vae_model_list = get_model_list(directory_vaes)
+vae_model_list = get_model_list(DIRECTORY_VAES)
 vae_model_list.insert(0, "None")
 
 print('\033[33m🏁 Download and listing of valid models completed.\033[0m')
@@ -338,185 +99,110 @@ print('\033[33m🏁 Download and listing of valid models completed.\033[0m')
 #######################
 # GUI
 #######################
-import gradio as gr
-import logging
 logging.getLogger("diffusers").setLevel(logging.ERROR)
-import diffusers
 diffusers.utils.logging.set_verbosity(40)
-import warnings
 warnings.filterwarnings(action="ignore", category=FutureWarning, module="diffusers")
 warnings.filterwarnings(action="ignore", category=UserWarning, module="diffusers")
 warnings.filterwarnings(action="ignore", category=FutureWarning, module="transformers")
-from stablepy import logger
-
 logger.setLevel(logging.DEBUG)
-
-msg_inc_vae = (
-    "Use the right VAE for your model to maintain image quality. The wrong"
-    " VAE can lead to poor results, like blurriness in the generated images."
-)
-
-SDXL_TASK = [k for k, v in TASK_STABLEPY.items() if v in SDXL_TASKS]
-SD_TASK = [k for k, v in TASK_STABLEPY.items() if v in SD15_TASKS]
-FLUX_TASK = list(TASK_STABLEPY.keys())[:3] + [k for k, v in TASK_STABLEPY.items() if v in FLUX_CN_UNION_MODES.keys()]
-
-MODEL_TYPE_TASK = {
-    "SD 1.5": SD_TASK,
-    "SDXL": SDXL_TASK,
-    "FLUX": FLUX_TASK,
-}
-
-MODEL_TYPE_CLASS = {
-    "diffusers:StableDiffusionPipeline": "SD 1.5",
-    "diffusers:StableDiffusionXLPipeline": "SDXL",
-    "diffusers:FluxPipeline": "FLUX",
-}
-
-POST_PROCESSING_SAMPLER = ["Use same sampler"] + scheduler_names[:-2]
 
 CSS = """
 .contain { display: flex; flex-direction: column; }
 #component-0 { height: 100%; }
 #gallery { flex-grow: 1; }
+#load_model { height: 50px; }
 """
-
-SUBTITLE_GUI = (
-    "### This demo uses [diffusers](https://github.com/huggingface/diffusers)"
-    " to perform different tasks in image generation."
-)
-
-
-def extract_parameters(input_string):
-    parameters = {}
-    input_string = input_string.replace("\n", "")
-
-    if "Negative prompt:" not in input_string:
-        if "Steps:" in input_string:
-            input_string = input_string.replace("Steps:", "Negative prompt: Steps:")
-        else:
-            print("Invalid metadata")
-            parameters["prompt"] = input_string
-            return parameters
-
-    parm = input_string.split("Negative prompt:")
-    parameters["prompt"] = parm[0].strip()
-    if "Steps:" not in parm[1]:
-        print("Steps not detected")
-        parameters["neg_prompt"] = parm[1].strip()
-        return parameters
-    parm = parm[1].split("Steps:")
-    parameters["neg_prompt"] = parm[0].strip()
-    input_string = "Steps:" + parm[1]
-
-    # Extracting Steps
-    steps_match = re.search(r'Steps: (\d+)', input_string)
-    if steps_match:
-        parameters['Steps'] = int(steps_match.group(1))
-
-    # Extracting Size
-    size_match = re.search(r'Size: (\d+x\d+)', input_string)
-    if size_match:
-        parameters['Size'] = size_match.group(1)
-        width, height = map(int, parameters['Size'].split('x'))
-        parameters['width'] = width
-        parameters['height'] = height
-
-    # Extracting other parameters
-    other_parameters = re.findall(r'(\w+): (.*?)(?=, \w+|$)', input_string)
-    for param in other_parameters:
-        parameters[param[0]] = param[1].strip('"')
-
-    return parameters
-
-
-def get_my_lora(link_url):
-    for url in [url.strip() for url in link_url.split(',')]:
-        if not os.path.exists(f"./loras/{url.split('/')[-1]}"):
-            download_things(directory_loras, url, HF_TOKEN, CIVITAI_API_KEY)
-    new_lora_model_list = get_model_list(directory_loras)
-    new_lora_model_list.insert(0, "None")
-    new_lora_model_list = new_lora_model_list + DIFFUSERS_FORMAT_LORAS
-
-    return gr.update(
-        choices=new_lora_model_list
-    ), gr.update(
-        choices=new_lora_model_list
-    ), gr.update(
-        choices=new_lora_model_list
-    ), gr.update(
-        choices=new_lora_model_list
-    ), gr.update(
-        choices=new_lora_model_list
-    ),
-
-
-def info_html(json_data, title, subtitle):
-    return f"""
-        <div style='padding: 0; border-radius: 10px;'>
-            <p style='margin: 0; font-weight: bold;'>{title}</p>
-            <details>
-                <summary>Details</summary>
-                <p style='margin: 0; font-weight: bold;'>{subtitle}</p>
-            </details>
-        </div>
-        """
-
-
-def get_model_type(repo_id: str):
-    api = HfApi(token=os.environ.get("HF_TOKEN"))  # if use private or gated model
-    default = "SD 1.5"
-    try:
-        model = api.model_info(repo_id=repo_id, timeout=5.0)
-        tags = model.tags
-        for tag in tags:
-            if tag in MODEL_TYPE_CLASS.keys(): return MODEL_TYPE_CLASS.get(tag, default)
-    except Exception:
-        return default
-    return default
 
 
 class GuiSD:
     def __init__(self, stream=True):
         self.model = None
-
-        print("Loading model...")
-        self.model = Model_Diffusers(
-            base_model_id="Lykon/dreamshaper-8",
-            task_name="txt2img",
-            vae_model=None,
-            type_model_precision=torch.float16,
-            retain_task_model_in_cache=False,
-            device="cpu",
-        )
-        self.model.load_beta_styles()
+        self.status_loading = False
+        self.sleep_loading = 4
+        self.last_load = datetime.now()
 
     def load_new_model(self, model_name, vae_model, task, progress=gr.Progress(track_tqdm=True)):
 
-        yield f"Loading model: {model_name}"
-
         vae_model = vae_model if vae_model != "None" else None
         model_type = get_model_type(model_name)
+        dtype_model = torch.bfloat16 if model_type == "FLUX" else torch.float16
+
+        if not os.path.exists(model_name):
+            _ = download_diffuser_repo(
+                repo_name=model_name,
+                model_type=model_type,
+                revision="main",
+                token=True,
+            )
+
+        for i in range(68):
+            if not self.status_loading:
+                self.status_loading = True
+                if i > 0:
+                    time.sleep(self.sleep_loading)
+                    print("Previous model ops...")
+                break
+            time.sleep(0.5)
+            print(f"Waiting queue {i}")
+            yield "Waiting queue"
+
+        self.status_loading = True
+
+        yield f"Loading model: {model_name}"
 
         if vae_model:
             vae_type = "SDXL" if "sdxl" in vae_model.lower() else "SD 1.5"
             if model_type != vae_type:
-                gr.Warning(msg_inc_vae)
+                gr.Warning(WARNING_MSG_VAE)
 
-        self.model.device = torch.device("cpu")
-        dtype_model = torch.bfloat16 if model_type == "FLUX" else torch.float16
+        print("Loading model...")
 
-        self.model.load_pipe(
-            model_name,
-            task_name=TASK_STABLEPY[task],
-            vae_model=vae_model,
-            type_model_precision=dtype_model,
-            retain_task_model_in_cache=False,
-        )
+        try:
+            start_time = time.time()
+
+            if self.model is None:
+                self.model = Model_Diffusers(
+                    base_model_id=model_name,
+                    task_name=TASK_STABLEPY[task],
+                    vae_model=vae_model,
+                    type_model_precision=dtype_model,
+                    retain_task_model_in_cache=False,
+                    device="cpu",
+                )
+            else:
+
+                if self.model.base_model_id != model_name:
+                    load_now_time = datetime.now()
+                    elapsed_time = (load_now_time - self.last_load).total_seconds()
+
+                    if elapsed_time <= 8:
+                        print("Waiting for the previous model's time ops...")
+                        time.sleep(8-elapsed_time)
+
+                self.model.device = torch.device("cpu")
+                self.model.load_pipe(
+                    model_name,
+                    task_name=TASK_STABLEPY[task],
+                    vae_model=vae_model,
+                    type_model_precision=dtype_model,
+                    retain_task_model_in_cache=False,
+                )
+
+            end_time = time.time()
+            self.sleep_loading = max(min(int(end_time - start_time), 10), 4)
+        except Exception as e:
+            self.last_load = datetime.now()
+            self.status_loading = False
+            self.sleep_loading = 4
+            raise e
+
+        self.last_load = datetime.now()
+        self.status_loading = False
 
         yield f"Model loaded: {model_name}"
 
     # @spaces.GPU(duration=59)
-    @torch.inference_mode()
+    # @torch.inference_mode()
     def generate_pipeline(
         self,
         prompt,
@@ -622,6 +308,8 @@ class GuiSD:
         scale_ip2,
         pag_scale,
     ):
+        info_state = html_template_message("Navigating latent space...")
+        yield info_state, gr.update(), gr.update()
 
         vae_model = vae_model if vae_model != "None" else None
         loras_list = [lora1, lora2, lora3, lora4, lora5]
@@ -652,7 +340,8 @@ class GuiSD:
                 params_ip_mode.append(modeip)
                 params_ip_scale.append(scaleip)
 
-        self.model.stream_config(concurrency=5, latent_resize_by=1, vae_decoding=False)
+        concurrency = 5
+        self.model.stream_config(concurrency=concurrency, latent_resize_by=1, vae_decoding=False)
 
         if task != "txt2img" and not image_control:
             raise ValueError("No control image found: To use this function, you have to upload an image in 'Image ControlNet/Inpaint/Img2img'")
@@ -785,13 +474,15 @@ class GuiSD:
             self.model.pipe.transformer.to(self.model.device)
             print("transformer to cuda")
 
-        info_state = "PROCESSING "
+        actual_progress = 0
+        info_images = gr.update()
         for img, seed, image_path, metadata in self.model(**pipe_params):
-            info_state += ">"
+            info_state = progress_step_bar(actual_progress, steps)
+            actual_progress += concurrency
             if image_path:
-                info_state = f"COMPLETE. Seeds: {str(seed)}"
+                info_images = f"Seeds: {str(seed)}"
                 if vae_msg:
-                    info_state = info_state + "<br>" + vae_msg
+                    info_images = info_images + "<br>" + vae_msg
 
                 for status, lora in zip(self.model.lora_status, self.model.lora_memory):
                     if status:
@@ -800,9 +491,9 @@ class GuiSD:
                         msg_lora += f"<br>Error with: {lora}"
 
                 if msg_lora:
-                    info_state += msg_lora
+                    info_images += msg_lora
 
-                info_state = info_state + "<br>" + "GENERATION DATA:<br>" + metadata[0].replace("\n", "<br>") + "<br>-------<br>"
+                info_images = info_images + "<br>" + "GENERATION DATA:<br>" + metadata[0].replace("\n", "<br>") + "<br>-------<br>"
 
                 download_links = "<br>".join(
                     [
@@ -811,22 +502,16 @@ class GuiSD:
                     ]
                 )
                 if save_generated_images:
-                    info_state += f"<br>{download_links}"
+                    info_images += f"<br>{download_links}"
 
-            yield img, info_state
+                info_state = "COMPLETE"
 
-
-def update_task_options(model_name, task_name):
-    new_choices = MODEL_TYPE_TASK[get_model_type(model_name)]
-
-    if task_name not in new_choices:
-        task_name = "txt2img"
-
-    return gr.update(value=task_name, choices=new_choices)
+            yield info_state, img, info_images
 
 
 def dynamic_gpu_duration(func, duration, *args):
 
+    @torch.inference_mode()
     @spaces.GPU(duration=duration)
     def wrapped_func():
         yield from func(*args)
@@ -856,7 +541,7 @@ def sd_gen_generate_pipeline(*args):
         msg_load_lora = "Updating LoRAs in CPU (Slow but saves GPU usage)..."
 
     if lora_list != sd_gen.model.lora_memory and lora_list != [None] * 5:
-        yield None, msg_load_lora
+        yield msg_load_lora, gr.update(), gr.update()
 
     # Load lora in CPU
     if load_lora_cpu:
@@ -882,14 +567,15 @@ def sd_gen_generate_pipeline(*args):
             )
             gr.Info(f"LoRAs in cache: {lora_cache_msg}")
 
-        msg_request = f"Requesting {gpu_duration_arg}s. of GPU time"
+    msg_request = f"Requesting {gpu_duration_arg}s. of GPU time.<br>Model: {sd_gen.model.base_model_id}"
+    if verbose_arg:
         gr.Info(msg_request)
         print(msg_request)
-
-    # yield from sd_gen.generate_pipeline(*generation_args)
+    yield msg_request, gr.update(), gr.update()
 
     start_time = time.time()
 
+    # yield from sd_gen.generate_pipeline(*generation_args)
     yield from dynamic_gpu_duration(
         sd_gen.generate_pipeline,
         gpu_duration_arg,
@@ -897,33 +583,19 @@ def sd_gen_generate_pipeline(*args):
     )
 
     end_time = time.time()
+    execution_time = end_time - start_time
+    msg_task_complete = (
+        f"GPU task complete in: {round(execution_time, 0) + 1} seconds"
+    )
 
     if verbose_arg:
-        execution_time = end_time - start_time
-        msg_task_complete = (
-            f"GPU task complete in: {round(execution_time, 0) + 1} seconds"
-        )
         gr.Info(msg_task_complete)
         print(msg_task_complete)
 
-
-def extract_exif_data(image):
-    if image is None: return ""
-
-    try:
-        metadata_keys = ['parameters', 'metadata', 'prompt', 'Comment']
-
-        for key in metadata_keys:
-            if key in image.info:
-                return image.info[key]
-
-        return str(image.info)
-
-    except Exception as e:
-        return f"Error extracting metadata: {str(e)}"
+    yield msg_task_complete, gr.update(), gr.update()
 
 
-@spaces.GPU(duration=20)
+@spaces.GPU(duration=18)
 def esrgan_upscale(image, upscaler_name, upscaler_size):
     if image is None: return None
 
@@ -958,6 +630,14 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
 
             with gr.Column(scale=2):
 
+                def update_task_options(model_name, task_name):
+                    new_choices = MODEL_TYPE_TASK[get_model_type(model_name)]
+
+                    if task_name not in new_choices:
+                        task_name = "txt2img"
+
+                    return gr.update(value=task_name, choices=new_choices)
+
                 task_gui = gr.Dropdown(label="Task", choices=SDXL_TASK, value=TASK_MODEL_LIST[0])
                 model_name_gui = gr.Dropdown(label="Model", choices=model_list, value=model_list[0], allow_custom_value=True)
                 prompt_gui = gr.Textbox(lines=5, placeholder="Enter prompt", label="Prompt")
@@ -974,7 +654,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     [task_gui],
                 )
 
-                load_model_gui = gr.HTML()
+                load_model_gui = gr.HTML(elem_id="load_model", elem_classes="contain")
 
                 result_images = gr.Gallery(
                     label="Generated images",
@@ -1093,15 +773,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     )
 
                 num_images_gui = gr.Slider(minimum=1, maximum=5, step=1, value=1, label="Images")
-                prompt_s_options = [
-                    ("Compel format: (word)weight", "Compel"),
-                    ("Classic format: (word:weight)", "Classic"),
-                    ("Classic-original format: (word:weight)", "Classic-original"),
-                    ("Classic-no_norm format: (word:weight)", "Classic-no_norm"),
-                    ("Classic-ignore", "Classic-ignore"),
-                    ("None", "None"),
-                ]
-                prompt_syntax_gui = gr.Dropdown(label="Prompt Syntax", choices=prompt_s_options, value=prompt_s_options[1][1])
+                prompt_syntax_gui = gr.Dropdown(label="Prompt Syntax", choices=PROMPT_W_OPTIONS, value=PROMPT_W_OPTIONS[1][1])
                 vae_model_gui = gr.Dropdown(label="VAE Model", choices=vae_model_list, value=vae_model_list[0])
 
                 with gr.Accordion("Hires fix", open=False, visible=True):
@@ -1248,7 +920,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         negative_prompt_ad_a_gui = gr.Textbox(label="Negative prompt", placeholder="Main negative prompt will be use", lines=3)
                         strength_ad_a_gui = gr.Number(label="Strength:", value=0.35, step=0.01, minimum=0.01, maximum=1.0)
                         face_detector_ad_a_gui = gr.Checkbox(label="Face detector", value=True)
-                        person_detector_ad_a_gui = gr.Checkbox(label="Person detector", value=True)
+                        person_detector_ad_a_gui = gr.Checkbox(label="Person detector", value=False)
                         hand_detector_ad_a_gui = gr.Checkbox(label="Hand detector", value=False)
                         mask_dilation_a_gui = gr.Number(label="Mask dilation:", value=4, minimum=1)
                         mask_blur_a_gui = gr.Number(label="Mask blur:", value=4, minimum=1)
@@ -1260,7 +932,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         prompt_ad_b_gui = gr.Textbox(label="Main prompt", placeholder="Main prompt will be use", lines=3)
                         negative_prompt_ad_b_gui = gr.Textbox(label="Negative prompt", placeholder="Main negative prompt will be use", lines=3)
                         strength_ad_b_gui = gr.Number(label="Strength:", value=0.35, step=0.01, minimum=0.01, maximum=1.0)
-                        face_detector_ad_b_gui = gr.Checkbox(label="Face detector", value=True)
+                        face_detector_ad_b_gui = gr.Checkbox(label="Face detector", value=False)
                         person_detector_ad_b_gui = gr.Checkbox(label="Person detector", value=True)
                         hand_detector_ad_b_gui = gr.Checkbox(label="Hand detector", value=False)
                         mask_dilation_b_gui = gr.Number(label="Mask dilation:", value=4, minimum=1)
@@ -1278,7 +950,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     retain_task_cache_gui = gr.Checkbox(value=False, label="Retain task model in cache")
                     leave_progress_bar_gui = gr.Checkbox(value=True, label="Leave Progress Bar")
                     disable_progress_bar_gui = gr.Checkbox(value=False, label="Disable Progress Bar")
-                    display_images_gui = gr.Checkbox(value=True, label="Display Images")
+                    display_images_gui = gr.Checkbox(value=False, label="Display Images")
                     image_previews_gui = gr.Checkbox(value=True, label="Image Previews")
                     image_storage_location_gui = gr.Textbox(value="./images", label="Image Storage Location")
                     retain_compel_previous_load_gui = gr.Checkbox(value=False, label="Retain Compel Previous Load")
@@ -1287,172 +959,10 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     xformers_memory_efficient_attention_gui = gr.Checkbox(value=False, label="Xformers Memory Efficient Attention")
 
         with gr.Accordion("Examples and help", open=False, visible=True):
-            gr.Markdown(
-                """### Help:
-                - The current space runs on a ZERO GPU which is assigned for approximately 60 seconds; Therefore, if you submit expensive tasks, the operation may be canceled upon reaching the maximum allowed time with 'GPU TASK ABORTED'.
-                - Distorted or strange images often result from high prompt weights, so it's best to use low weights and scales, and consider using Classic variants like 'Classic-original'.
-                - For better results with Pony Diffusion, try using sampler DPM++ 1s or DPM2 with Compel or Classic prompt weights.
-                """
-            )
-            gr.Markdown(
-                """### The following examples perform specific tasks:
-                1. Generation with SDXL and upscale
-                2. Generation with FLUX dev
-                3. ControlNet Canny SDXL
-                4. Optical pattern (Optical illusion) SDXL
-                5. Convert an image to a coloring drawing
-                6. ControlNet OpenPose SD 1.5 and Latent upscale
-
-                - Different tasks can be performed, such as img2img or using the IP adapter, to preserve a person's appearance or a specific style based on an image.
-                """
-            )
+            gr.Markdown(HELP_GUI)
+            gr.Markdown(EXAMPLES_GUI_HELP)
             gr.Examples(
-                examples=[
-                    [
-                        "1girl, souryuu asuka langley, neon genesis evangelion, rebuild of evangelion, lance of longinus, cat hat, plugsuit, pilot suit, red bodysuit, sitting, crossed legs, black eye patch, throne, looking down, from bottom, looking at viewer, outdoors, (masterpiece), (best quality), (ultra-detailed), very aesthetic, illustration, disheveled hair, perfect composition, moist skin, intricate details",
-                        "nfsw, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, unfinished, very displeasing, oldest, early, chromatic aberration, artistic error, scan, abstract",
-                        28,
-                        7.0,
-                        -1,
-                        "None",
-                        0.33,
-                        "Euler a",
-                        1152,
-                        896,
-                        "cagliostrolab/animagine-xl-3.1",
-                        "txt2img",
-                        "image.webp",  # img conttol
-                        1024,  # img resolution
-                        0.35,  # strength
-                        1.0,  # cn scale
-                        0.0,  # cn start
-                        1.0,  # cn end
-                        "Classic",
-                        "Nearest",
-                        45,
-                        False,
-                    ],
-                    [
-                        "a digital illustration of a movie poster titled 'Finding Emo', finding nemo parody poster, featuring a depressed cartoon clownfish with black emo hair, eyeliner, and piercings, bored expression, swimming in a dark underwater scene, in the background, movie title in a dripping, grungy font, moody blue and purple color palette",
-                        "",
-                        24,
-                        3.5,
-                        -1,
-                        "None",
-                        0.33,
-                        "Euler a",
-                        1152,
-                        896,
-                        "black-forest-labs/FLUX.1-dev",
-                        "txt2img",
-                        None,  # img conttol
-                        1024,  # img resolution
-                        0.35,  # strength
-                        1.0,  # cn scale
-                        0.0,  # cn start
-                        1.0,  # cn end
-                        "Classic",
-                        None,
-                        70,
-                        True,
-                    ],
-                    [
-                        "((masterpiece)), best quality, blonde disco girl, detailed face, realistic face, realistic hair, dynamic pose, pink pvc, intergalactic disco background, pastel lights, dynamic contrast, airbrush, fine detail, 70s vibe, midriff",
-                        "(worst quality:1.2), (bad quality:1.2), (poor quality:1.2), (missing fingers:1.2), bad-artist-anime, bad-artist, bad-picture-chill-75v",
-                        48,
-                        3.5,
-                        -1,
-                        "None",
-                        0.33,
-                        "DPM++ 2M SDE Lu",
-                        1024,
-                        1024,
-                        "misri/epicrealismXL_v7FinalDestination",
-                        "canny ControlNet",
-                        "image.webp",  # img conttol
-                        1024,  # img resolution
-                        0.35,  # strength
-                        1.0,  # cn scale
-                        0.0,  # cn start
-                        1.0,  # cn end
-                        "Classic",
-                        None,
-                        44,
-                        False,
-                    ],
-                    [
-                        "cinematic scenery old city ruins",
-                        "(worst quality, low quality, illustration, 3d, 2d, painting, cartoons, sketch), (illustration, 3d, 2d, painting, cartoons, sketch, blurry, film grain, noise), (low quality, worst quality:1.2)",
-                        50,
-                        4.0,
-                        -1,
-                        "None",
-                        0.33,
-                        "Euler a",
-                        1024,
-                        1024,
-                        "misri/juggernautXL_juggernautX",
-                        "optical pattern ControlNet",
-                        "spiral_no_transparent.png",  # img conttol
-                        1024,  # img resolution
-                        0.35,  # strength
-                        1.0,  # cn scale
-                        0.05,  # cn start
-                        0.75,  # cn end
-                        "Classic",
-                        None,
-                        35,
-                        False,
-                    ],
-                    [
-                        "black and white, line art, coloring drawing, clean line art, black strokes, no background, white, black, free lines, black scribbles, on paper, A blend of comic book art and lineart full of black and white color, masterpiece, high-resolution, trending on Pixiv fan box, palette knife, brush strokes, two-dimensional, planar vector, T-shirt design, stickers, and T-shirt design, vector art, fantasy art, Adobe Illustrator, hand-painted, digital painting, low polygon, soft lighting, aerial view, isometric style, retro aesthetics, 8K resolution, black sketch lines, monochrome, invert color",
-                        "color, red, green, yellow, colored, duplicate, blurry, abstract, disfigured, deformed, animated, toy, figure, framed, 3d, bad art, poorly drawn, extra limbs, close up, b&w, weird colors, blurry, watermark, blur haze, 2 heads, long neck, watermark, elongated body, cropped image, out of frame, draft, deformed hands, twisted fingers, double image, malformed hands, multiple heads, extra limb, ugly, poorly drawn hands, missing limb, cut-off, over satured, grain, lowères, bad anatomy, poorly drawn face, mutation, mutated, floating limbs, disconnected limbs, out of focus, long body, disgusting, extra fingers, groos proportions, missing arms, mutated hands, cloned face, missing legs, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, grainy, signature, cut off, draft, deformed, blurry, bad anatomy, disfigured, poorly drawn face, mutation, bluelish, blue",
-                        20,
-                        4.0,
-                        -1,
-                        "loras/Coloring_book_-_LineArt.safetensors",
-                        1.0,
-                        "DPM++ 2M SDE Karras",
-                        1024,
-                        1024,
-                        "cagliostrolab/animagine-xl-3.1",
-                        "lineart ControlNet",
-                        "color_image.png",  # img conttol
-                        896,  # img resolution
-                        0.35,  # strength
-                        1.0,  # cn scale
-                        0.0,  # cn start
-                        1.0,  # cn end
-                        "Compel",
-                        None,
-                        35,
-                        False,
-                    ],
-                    [
-                        "1girl,face,curly hair,red hair,white background,",
-                        "(worst quality:2),(low quality:2),(normal quality:2),lowres,watermark,",
-                        38,
-                        5.0,
-                        -1,
-                        "None",
-                        0.33,
-                        "DPM++ 2M SDE Karras",
-                        512,
-                        512,
-                        "digiplay/majicMIX_realistic_v7",
-                        "openpose ControlNet",
-                        "image.webp",  # img conttol
-                        1024,  # img resolution
-                        0.35,  # strength
-                        1.0,  # cn scale
-                        0.0,  # cn start
-                        0.9,  # cn end
-                        "Compel",
-                        "Latent (antialiased)",
-                        46,
-                        False,
-                    ],
-                ],
+                examples=EXAMPLES_GUI,
                 fn=sd_gen.generate_pipeline,
                 inputs=[
                     prompt_gui,
@@ -1478,44 +988,12 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     gpu_duration_gui,
                     load_lora_cpu_gui,
                 ],
-                outputs=[result_images, actual_task_info],
+                outputs=[load_model_gui, result_images, actual_task_info],
                 cache_examples=False,
             )
-            gr.Markdown(
-                """### Resources
-                - John6666's space has some great features you might find helpful [link](https://huggingface.co/spaces/John6666/DiffuseCraftMod).
-                - You can also try the image generator in Colab’s free tier, which provides free GPU [link](https://github.com/R3gm/SD_diffusers_interactive).
-                """
-            )
+            gr.Markdown(RESOURCES)
 
     with gr.Tab("Inpaint mask maker", render=True):
-
-        def create_mask_now(img, invert):            
-            import numpy as np
-            import time
-
-            time.sleep(0.5)
-
-            transparent_image = img["layers"][0]
-
-            # Extract the alpha channel
-            alpha_channel = np.array(transparent_image)[:, :, 3]
-
-            # Create a binary mask by thresholding the alpha channel
-            binary_mask = alpha_channel > 1
-
-            if invert:
-                print("Invert")
-                # Invert the binary mask so that the drawn shape is white and the rest is black
-                binary_mask = np.invert(binary_mask)
-
-            # Convert the binary mask to a 3-channel RGB mask
-            rgb_mask = np.stack((binary_mask,) * 3, axis=-1)
-
-            # Convert the mask to uint8
-            rgb_mask = rgb_mask.astype(np.uint8) * 255
-
-            return img["background"], rgb_mask
 
         with gr.Row():
             with gr.Column(scale=2):
@@ -1702,7 +1180,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             verbose_info_gui,
             gpu_duration_gui,
         ],
-        outputs=[result_images, actual_task_info],
+        outputs=[load_model_gui, result_images, actual_task_info],
         queue=True,
         show_progress="minimal",
     )
