@@ -1,0 +1,453 @@
+import os
+from stablepy.diffusers_vanilla.constants import FLUX_CN_UNION_MODES
+from stablepy import (
+    scheduler_names,
+    SD15_TASKS,
+    SDXL_TASKS,
+)
+
+# - **Download Models**
+DOWNLOAD_MODEL = "https://civitai.com/api/download/models/574369, https://huggingface.co/TechnoByte/MilkyWonderland/resolve/main/milkyWonderland_v40.safetensors"
+
+# - **Download VAEs**
+DOWNLOAD_VAE = "https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-c-1.1-b-0.5.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-blessed.safetensors?download=true, https://huggingface.co/digiplay/VAE/resolve/main/vividReal_v20.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true"
+
+# - **Download LoRAs**
+DOWNLOAD_LORA = "https://huggingface.co/Leopain/color/resolve/main/Coloring_book_-_LineArt.safetensors, https://civitai.com/api/download/models/135867, https://huggingface.co/Linaqruf/anime-detailer-xl-lora/resolve/main/anime-detailer-xl.safetensors?download=true, https://huggingface.co/Linaqruf/style-enhancer-xl-lora/resolve/main/style-enhancer-xl.safetensors?download=true, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SD15-8steps-CFG-lora.safetensors?download=true, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SDXL-8steps-CFG-lora.safetensors?download=true"
+
+LOAD_DIFFUSERS_FORMAT_MODEL = [
+    'stabilityai/stable-diffusion-xl-base-1.0',
+    'black-forest-labs/FLUX.1-dev',
+    'John6666/blue-pencil-flux1-v021-fp8-flux',
+    'John6666/wai-ani-flux-v10forfp8-fp8-flux',
+    'John6666/xe-anime-flux-v04-fp8-flux',
+    'John6666/lyh-anime-flux-v2a1-fp8-flux',
+    'John6666/carnival-unchained-v10-fp8-flux',
+    'cagliostrolab/animagine-xl-3.1',
+    'John6666/epicrealism-xl-v8kiss-sdxl',
+    'misri/epicrealismXL_v7FinalDestination',
+    'misri/juggernautXL_juggernautX',
+    'misri/zavychromaxl_v80',
+    'SG161222/RealVisXL_V4.0',
+    'SG161222/RealVisXL_V5.0',
+    'misri/newrealityxlAllInOne_Newreality40',
+    'eienmojiki/Anything-XL',
+    'eienmojiki/Starry-XL-v5.2',
+    'gsdf/CounterfeitXL',
+    'KBlueLeaf/Kohaku-XL-Zeta',
+    'John6666/silvermoon-mix-01xl-v11-sdxl',
+    'WhiteAiZ/autismmixSDXL_autismmixConfetti_diffusers',
+    'kitty7779/ponyDiffusionV6XL',
+    'GraydientPlatformAPI/aniverse-pony',
+    'John6666/ras-real-anime-screencap-v1-sdxl',
+    'John6666/duchaiten-pony-xl-no-score-v60-sdxl',
+    'John6666/mistoon-anime-ponyalpha-sdxl',
+    'John6666/3x3x3mixxl-v2-sdxl',
+    'John6666/3x3x3mixxl-3dv01-sdxl',
+    'John6666/ebara-mfcg-pony-mix-v12-sdxl',
+    'John6666/t-ponynai3-v51-sdxl',
+    'John6666/t-ponynai3-v65-sdxl',
+    'John6666/prefect-pony-xl-v3-sdxl',
+    'John6666/mala-anime-mix-nsfw-pony-xl-v5-sdxl',
+    'John6666/wai-real-mix-v11-sdxl',
+    'John6666/wai-c-v6-sdxl',
+    'John6666/iniverse-mix-xl-sfwnsfw-pony-guofeng-v43-sdxl',
+    'John6666/photo-realistic-pony-v5-sdxl',
+    'John6666/pony-realism-v21main-sdxl',
+    'John6666/pony-realism-v22main-sdxl',
+    'John6666/cyberrealistic-pony-v63-sdxl',
+    'John6666/cyberrealistic-pony-v64-sdxl',
+    'John6666/cyberrealistic-pony-v65-sdxl',
+    'GraydientPlatformAPI/realcartoon-pony-diffusion',
+    'John6666/nova-anime-xl-pony-v5-sdxl',
+    'John6666/autismmix-sdxl-autismmix-pony-sdxl',
+    'John6666/aimz-dream-real-pony-mix-v3-sdxl',
+    'John6666/duchaiten-pony-real-v11fix-sdxl',
+    'John6666/duchaiten-pony-real-v20-sdxl',
+    'yodayo-ai/kivotos-xl-2.0',
+    'yodayo-ai/holodayo-xl-2.1',
+    'yodayo-ai/clandestine-xl-1.0',
+    'digiplay/majicMIX_sombre_v2',
+    'digiplay/majicMIX_realistic_v6',
+    'digiplay/majicMIX_realistic_v7',
+    'digiplay/DreamShaper_8',
+    'digiplay/BeautifulArt_v1',
+    'digiplay/DarkSushi2.5D_v1',
+    'digiplay/darkphoenix3D_v1.1',
+    'digiplay/BeenYouLiteL11_diffusers',
+    'Yntec/RevAnimatedV2Rebirth',
+    'youknownothing/cyberrealistic_v50',
+    'youknownothing/deliberate-v6',
+    'GraydientPlatformAPI/deliberate-cyber3',
+    'GraydientPlatformAPI/picx-real',
+    'GraydientPlatformAPI/perfectworld6',
+    'emilianJR/epiCRealism',
+    'votepurchase/counterfeitV30_v30',
+    'votepurchase/ChilloutMix',
+    'Meina/MeinaMix_V11',
+    'Meina/MeinaUnreal_V5',
+    'Meina/MeinaPastel_V7',
+    'GraydientPlatformAPI/realcartoon3d-17',
+    'GraydientPlatformAPI/realcartoon-pixar11',
+    'GraydientPlatformAPI/realcartoon-real17',
+]
+
+DIFFUSERS_FORMAT_LORAS = [
+    "nerijs/animation2k-flux",
+    "XLabs-AI/flux-RealismLora",
+]
+
+DOWNLOAD_EMBEDS = [
+    'https://huggingface.co/datasets/Nerfgun3/bad_prompt/blob/main/bad_prompt_version2.pt',
+    'https://huggingface.co/embed/negative/resolve/main/EasyNegativeV2.safetensors',
+    'https://huggingface.co/embed/negative/resolve/main/bad-hands-5.pt',
+    ]
+
+CIVITAI_API_KEY = os.environ.get("CIVITAI_API_KEY")
+HF_TOKEN = os.environ.get("HF_READ_TOKEN")
+
+DIRECTORY_MODELS = 'models'
+DIRECTORY_LORAS = 'loras'
+DIRECTORY_VAES = 'vaes'
+DIRECTORY_EMBEDS = 'embedings'
+
+PREPROCESSOR_CONTROLNET = {
+  "openpose": [
+    "Openpose",
+    "None",
+  ],
+  "scribble": [
+    "HED",
+    "PidiNet",
+    "None",
+  ],
+  "softedge": [
+    "PidiNet",
+    "HED",
+    "HED safe",
+    "PidiNet safe",
+    "None",
+  ],
+  "segmentation": [
+    "UPerNet",
+    "None",
+  ],
+  "depth": [
+    "DPT",
+    "Midas",
+    "None",
+  ],
+  "normalbae": [
+    "NormalBae",
+    "None",
+  ],
+  "lineart": [
+    "Lineart",
+    "Lineart coarse",
+    "Lineart (anime)",
+    "None",
+    "None (anime)",
+  ],
+  "lineart_anime": [
+    "Lineart",
+    "Lineart coarse",
+    "Lineart (anime)",
+    "None",
+    "None (anime)",
+  ],
+  "shuffle": [
+    "ContentShuffle",
+    "None",
+  ],
+  "canny": [
+    "Canny",
+    "None",
+  ],
+  "mlsd": [
+    "MLSD",
+    "None",
+  ],
+  "ip2p": [
+    "ip2p"
+  ],
+  "recolor": [
+    "Recolor luminance",
+    "Recolor intensity",
+    "None",
+  ],
+  "tile": [
+    "Mild Blur",
+    "Moderate Blur",
+    "Heavy Blur",
+    "None",
+  ],
+
+}
+
+TASK_STABLEPY = {
+    'txt2img': 'txt2img',
+    'img2img': 'img2img',
+    'inpaint': 'inpaint',
+    # 'canny T2I Adapter': 'sdxl_canny_t2i',  # NO HAVE STEP CALLBACK PARAMETERS SO NOT WORKS WITH DIFFUSERS 0.29.0
+    # 'sketch  T2I Adapter': 'sdxl_sketch_t2i',
+    # 'lineart  T2I Adapter': 'sdxl_lineart_t2i',
+    # 'depth-midas  T2I Adapter': 'sdxl_depth-midas_t2i',
+    # 'openpose  T2I Adapter': 'sdxl_openpose_t2i',
+    'openpose ControlNet': 'openpose',
+    'canny ControlNet': 'canny',
+    'mlsd ControlNet': 'mlsd',
+    'scribble ControlNet': 'scribble',
+    'softedge ControlNet': 'softedge',
+    'segmentation ControlNet': 'segmentation',
+    'depth ControlNet': 'depth',
+    'normalbae ControlNet': 'normalbae',
+    'lineart ControlNet': 'lineart',
+    'lineart_anime ControlNet': 'lineart_anime',
+    'shuffle ControlNet': 'shuffle',
+    'ip2p ControlNet': 'ip2p',
+    'optical pattern ControlNet': 'pattern',
+    'recolor ControlNet': 'recolor',
+    'tile ControlNet': 'tile',
+}
+
+TASK_MODEL_LIST = list(TASK_STABLEPY.keys())
+
+UPSCALER_DICT_GUI = {
+    None: None,
+    "Lanczos": "Lanczos",
+    "Nearest": "Nearest",
+    'Latent': 'Latent',
+    'Latent (antialiased)': 'Latent (antialiased)',
+    'Latent (bicubic)': 'Latent (bicubic)',
+    'Latent (bicubic antialiased)': 'Latent (bicubic antialiased)',
+    'Latent (nearest)': 'Latent (nearest)',
+    'Latent (nearest-exact)': 'Latent (nearest-exact)',
+    "RealESRGAN_x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
+    "RealESRNet_x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.1/RealESRNet_x4plus.pth",
+    "RealESRGAN_x4plus_anime_6B": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
+    "RealESRGAN_x2plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth",
+    "realesr-animevideov3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-animevideov3.pth",
+    "realesr-general-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-x4v3.pth",
+    "realesr-general-wdn-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-wdn-x4v3.pth",
+    "4x-UltraSharp": "https://huggingface.co/Shandypur/ESRGAN-4x-UltraSharp/resolve/main/4x-UltraSharp.pth",
+    "4x_foolhardy_Remacri": "https://huggingface.co/FacehugmanIII/4x_foolhardy_Remacri/resolve/main/4x_foolhardy_Remacri.pth",
+    "Remacri4xExtraSmoother": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/Remacri%204x%20ExtraSmoother.pth",
+    "AnimeSharp4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/AnimeSharp%204x.pth",
+    "lollypop": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/lollypop.pth",
+    "RealisticRescaler4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/RealisticRescaler%204x.pth",
+    "NickelbackFS4x": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/NickelbackFS%204x.pth"
+}
+
+UPSCALER_KEYS = list(UPSCALER_DICT_GUI.keys())
+
+PROMPT_W_OPTIONS = [
+    ("Compel format: (word)weight", "Compel"),
+    ("Classic format: (word:weight)", "Classic"),
+    ("Classic-original format: (word:weight)", "Classic-original"),
+    ("Classic-no_norm format: (word:weight)", "Classic-no_norm"),
+    ("Classic-ignore", "Classic-ignore"),
+    ("None", "None"),
+]
+
+WARNING_MSG_VAE = (
+    "Use the right VAE for your model to maintain image quality. The wrong"
+    " VAE can lead to poor results, like blurriness in the generated images."
+)
+
+SDXL_TASK = [k for k, v in TASK_STABLEPY.items() if v in SDXL_TASKS]
+SD_TASK = [k for k, v in TASK_STABLEPY.items() if v in SD15_TASKS]
+FLUX_TASK = list(TASK_STABLEPY.keys())[:3] + [k for k, v in TASK_STABLEPY.items() if v in FLUX_CN_UNION_MODES.keys()]
+
+MODEL_TYPE_TASK = {
+    "SD 1.5": SD_TASK,
+    "SDXL": SDXL_TASK,
+    "FLUX": FLUX_TASK,
+}
+
+MODEL_TYPE_CLASS = {
+    "diffusers:StableDiffusionPipeline": "SD 1.5",
+    "diffusers:StableDiffusionXLPipeline": "SDXL",
+    "diffusers:FluxPipeline": "FLUX",
+}
+
+POST_PROCESSING_SAMPLER = ["Use same sampler"] + scheduler_names[:-2]
+
+SUBTITLE_GUI = (
+    "### This demo uses [diffusers](https://github.com/huggingface/diffusers)"
+    " to perform different tasks in image generation."
+)
+
+HELP_GUI = (
+    """### Help:
+    - The current space runs on a ZERO GPU which is assigned for approximately 60 seconds; Therefore, if you submit expensive tasks, the operation may be canceled upon reaching the maximum allowed time with 'GPU TASK ABORTED'.
+    - Distorted or strange images often result from high prompt weights, so it's best to use low weights and scales, and consider using Classic variants like 'Classic-original'.
+    - For better results with Pony Diffusion, try using sampler DPM++ 1s or DPM2 with Compel or Classic prompt weights.
+    """
+)
+
+EXAMPLES_GUI_HELP = (
+    """### The following examples perform specific tasks:
+    1. Generation with SDXL and upscale
+    2. Generation with FLUX dev
+    3. ControlNet Canny SDXL
+    4. Optical pattern (Optical illusion) SDXL
+    5. Convert an image to a coloring drawing
+    6. ControlNet OpenPose SD 1.5 and Latent upscale
+
+    - Different tasks can be performed, such as img2img or using the IP adapter, to preserve a person's appearance or a specific style based on an image.
+    """
+)
+
+EXAMPLES_GUI = [
+    [
+        "1girl, souryuu asuka langley, neon genesis evangelion, rebuild of evangelion, lance of longinus, cat hat, plugsuit, pilot suit, red bodysuit, sitting, crossed legs, black eye patch, throne, looking down, from bottom, looking at viewer, outdoors, (masterpiece), (best quality), (ultra-detailed), very aesthetic, illustration, disheveled hair, perfect composition, moist skin, intricate details",
+        "nfsw, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, unfinished, very displeasing, oldest, early, chromatic aberration, artistic error, scan, abstract",
+        28,
+        7.0,
+        -1,
+        "None",
+        0.33,
+        "Euler a",
+        1152,
+        896,
+        "cagliostrolab/animagine-xl-3.1",
+        "txt2img",
+        "image.webp",  # img conttol
+        1024,  # img resolution
+        0.35,  # strength
+        1.0,  # cn scale
+        0.0,  # cn start
+        1.0,  # cn end
+        "Classic",
+        "Nearest",
+        45,
+        False,
+    ],
+    [
+        "a digital illustration of a movie poster titled 'Finding Emo', finding nemo parody poster, featuring a depressed cartoon clownfish with black emo hair, eyeliner, and piercings, bored expression, swimming in a dark underwater scene, in the background, movie title in a dripping, grungy font, moody blue and purple color palette",
+        "",
+        24,
+        3.5,
+        -1,
+        "None",
+        0.33,
+        "Euler a",
+        1152,
+        896,
+        "black-forest-labs/FLUX.1-dev",
+        "txt2img",
+        None,  # img conttol
+        1024,  # img resolution
+        0.35,  # strength
+        1.0,  # cn scale
+        0.0,  # cn start
+        1.0,  # cn end
+        "Classic",
+        None,
+        70,
+        True,
+    ],
+    [
+        "((masterpiece)), best quality, blonde disco girl, detailed face, realistic face, realistic hair, dynamic pose, pink pvc, intergalactic disco background, pastel lights, dynamic contrast, airbrush, fine detail, 70s vibe, midriff",
+        "(worst quality:1.2), (bad quality:1.2), (poor quality:1.2), (missing fingers:1.2), bad-artist-anime, bad-artist, bad-picture-chill-75v",
+        48,
+        3.5,
+        -1,
+        "None",
+        0.33,
+        "DPM++ 2M SDE Lu",
+        1024,
+        1024,
+        "misri/epicrealismXL_v7FinalDestination",
+        "canny ControlNet",
+        "image.webp",  # img conttol
+        1024,  # img resolution
+        0.35,  # strength
+        1.0,  # cn scale
+        0.0,  # cn start
+        1.0,  # cn end
+        "Classic",
+        None,
+        44,
+        False,
+    ],
+    [
+        "cinematic scenery old city ruins",
+        "(worst quality, low quality, illustration, 3d, 2d, painting, cartoons, sketch), (illustration, 3d, 2d, painting, cartoons, sketch, blurry, film grain, noise), (low quality, worst quality:1.2)",
+        50,
+        4.0,
+        -1,
+        "None",
+        0.33,
+        "Euler a",
+        1024,
+        1024,
+        "misri/juggernautXL_juggernautX",
+        "optical pattern ControlNet",
+        "spiral_no_transparent.png",  # img conttol
+        1024,  # img resolution
+        0.35,  # strength
+        1.0,  # cn scale
+        0.05,  # cn start
+        0.75,  # cn end
+        "Classic",
+        None,
+        35,
+        False,
+    ],
+    [
+        "black and white, line art, coloring drawing, clean line art, black strokes, no background, white, black, free lines, black scribbles, on paper, A blend of comic book art and lineart full of black and white color, masterpiece, high-resolution, trending on Pixiv fan box, palette knife, brush strokes, two-dimensional, planar vector, T-shirt design, stickers, and T-shirt design, vector art, fantasy art, Adobe Illustrator, hand-painted, digital painting, low polygon, soft lighting, aerial view, isometric style, retro aesthetics, 8K resolution, black sketch lines, monochrome, invert color",
+        "color, red, green, yellow, colored, duplicate, blurry, abstract, disfigured, deformed, animated, toy, figure, framed, 3d, bad art, poorly drawn, extra limbs, close up, b&w, weird colors, blurry, watermark, blur haze, 2 heads, long neck, watermark, elongated body, cropped image, out of frame, draft, deformed hands, twisted fingers, double image, malformed hands, multiple heads, extra limb, ugly, poorly drawn hands, missing limb, cut-off, over satured, grain, lowères, bad anatomy, poorly drawn face, mutation, mutated, floating limbs, disconnected limbs, out of focus, long body, disgusting, extra fingers, groos proportions, missing arms, mutated hands, cloned face, missing legs, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, grainy, signature, cut off, draft, deformed, blurry, bad anatomy, disfigured, poorly drawn face, mutation, bluelish, blue",
+        20,
+        4.0,
+        -1,
+        "loras/Coloring_book_-_LineArt.safetensors",
+        1.0,
+        "DPM++ 2M SDE Karras",
+        1024,
+        1024,
+        "cagliostrolab/animagine-xl-3.1",
+        "lineart ControlNet",
+        "color_image.png",  # img conttol
+        896,  # img resolution
+        0.35,  # strength
+        1.0,  # cn scale
+        0.0,  # cn start
+        1.0,  # cn end
+        "Compel",
+        None,
+        35,
+        False,
+    ],
+    [
+        "1girl,face,curly hair,red hair,white background,",
+        "(worst quality:2),(low quality:2),(normal quality:2),lowres,watermark,",
+        38,
+        5.0,
+        -1,
+        "None",
+        0.33,
+        "DPM++ 2M SDE Karras",
+        512,
+        512,
+        "digiplay/majicMIX_realistic_v7",
+        "openpose ControlNet",
+        "image.webp",  # img conttol
+        1024,  # img resolution
+        0.35,  # strength
+        1.0,  # cn scale
+        0.0,  # cn start
+        0.9,  # cn end
+        "Compel",
+        "Latent (antialiased)",
+        46,
+        False,
+    ],
+]
+
+RESOURCES = (
+    """### Resources
+    - John6666's space has some great features you might find helpful [link](https://huggingface.co/spaces/John6666/DiffuseCraftMod).
+    - You can also try the image generator in Colab’s free tier, which provides free GPU [link](https://github.com/R3gm/SD_diffusers_interactive).
+    """
+)
