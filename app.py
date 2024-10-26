@@ -86,6 +86,9 @@ for url_embed in DOWNLOAD_EMBEDS:
 
 # Build list models
 embed_list = get_model_list(DIRECTORY_EMBEDS)
+embed_list = [
+    (os.path.splitext(os.path.basename(emb))[0], emb) for emb in embed_list
+]
 model_list = get_model_list(DIRECTORY_MODELS)
 model_list = LOAD_DIFFUSERS_FORMAT_MODEL + model_list
 lora_model_list = get_model_list(DIRECTORY_LORAS)
@@ -424,7 +427,7 @@ class GuiSD:
             "lora_scale_D": lora_scale4,
             "lora_E": lora5 if lora5 != "None" else None,
             "lora_scale_E": lora_scale5,
-            "textual_inversion": embed_list if textual_inversion and self.model.class_name != "StableDiffusionXLPipeline" else [],
+            "textual_inversion": embed_list if textual_inversion else [],
             "syntax_weights": syntax_weights,  # "Classic"
             "sampler": sampler,
             "xformers_memory_efficient_attention": xformers_memory_efficient_attention,
@@ -483,6 +486,11 @@ class GuiSD:
                 info_images = f"Seeds: {str(seed)}"
                 if vae_msg:
                     info_images = info_images + "<br>" + vae_msg
+
+                if "Cannot copy out of meta tensor; no data!" in self.model.last_lora_error:
+                    msg_ram = "Unable to process the LoRAs due to high RAM usage; please try again later."
+                    print(msg_ram)
+                    msg_lora += f"<br>{msg_ram}"
 
                 for status, lora in zip(self.model.lora_status, self.model.lora_memory):
                     if status:
@@ -567,11 +575,11 @@ def sd_gen_generate_pipeline(*args):
             )
             gr.Info(f"LoRAs in cache: {lora_cache_msg}")
 
-    msg_request = f"Requesting {gpu_duration_arg}s. of GPU time.<br>Model: {sd_gen.model.base_model_id}"
+    msg_request = f"Requesting {gpu_duration_arg}s. of GPU time.\nModel: {sd_gen.model.base_model_id}"
     if verbose_arg:
         gr.Info(msg_request)
         print(msg_request)
-    yield msg_request, gr.update(), gr.update()
+    yield msg_request.replace("\n", "<br>"), gr.update(), gr.update()
 
     start_time = time.time()
 
@@ -585,7 +593,7 @@ def sd_gen_generate_pipeline(*args):
     end_time = time.time()
     execution_time = end_time - start_time
     msg_task_complete = (
-        f"GPU task complete in: {round(execution_time, 0) + 1} seconds"
+        f"GPU task complete in: {int(round(execution_time, 0) + 1)} seconds"
     )
 
     if verbose_arg:
@@ -595,7 +603,7 @@ def sd_gen_generate_pipeline(*args):
     yield msg_task_complete, gr.update(), gr.update()
 
 
-@spaces.GPU(duration=18)
+@spaces.GPU(duration=15)
 def esrgan_upscale(image, upscaler_name, upscaler_size):
     if image is None: return None
 
@@ -809,11 +817,13 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
 
                     with gr.Accordion("From URL", open=False, visible=True):
                         text_lora = gr.Textbox(label="LoRA URL", placeholder="https://civitai.com/api/download/models/28907", lines=1)
-                        button_lora = gr.Button("Get and update lists of LoRAs")
+                        romanize_text = gr.Checkbox(value=False, label="Transliterate name")
+                        button_lora = gr.Button("Obtain and refresh the LoRAs lists")
+                        new_lora_status = gr.HTML()
                         button_lora.click(
                             get_my_lora,
-                            [text_lora],
-                            [lora1_gui, lora2_gui, lora3_gui, lora4_gui, lora5_gui]
+                            [text_lora, romanize_text],
+                            [lora1_gui, lora2_gui, lora3_gui, lora4_gui, lora5_gui, new_lora_status]
                         )
 
                 with gr.Accordion("IP-Adapter", open=False, visible=True):
