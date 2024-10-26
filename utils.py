@@ -240,6 +240,7 @@ def extract_parameters(input_string):
 
 
 def get_my_lora(link_url, romanize):
+    l_name = ""
     for url in [url.strip() for url in link_url.split(',')]:
         if not os.path.exists(f"./loras/{url.split('/')[-1]}"):
             l_name = download_things(DIRECTORY_LORAS, url, HF_TOKEN, CIVITAI_API_KEY, romanize)
