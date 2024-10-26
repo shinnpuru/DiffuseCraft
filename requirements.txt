@@ -1,4 +1,5 @@
-git+https://github.com/R3gm/stablepy.git@flux_beta
+git+https://github.com/R3gm/stablepy.git@flux_beta #
 torch==2.2.0
 gdown
 opencv-python
+unidecode
