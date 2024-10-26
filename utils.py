@@ -13,10 +13,72 @@ from diffusers import DiffusionPipeline
 from huggingface_hub import model_info as model_info_data
 from diffusers.pipelines.pipeline_loading_utils import variant_compatible_siblings
 from pathlib import PosixPath
+from unidecode import unidecode
+import urllib.parse
+import copy
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
+
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0'
 
 
-def download_things(directory, url, hf_token="", civitai_api_key=""):
+def request_json_data(url):
+    model_version_id = url.split('/')[-1]
+    if "?modelVersionId=" in model_version_id:
+        match = re.search(r'modelVersionId=(\d+)', url)
+        model_version_id = match.group(1)
+
+    endpoint_url = f"https://civitai.com/api/v1/model-versions/{model_version_id}"
+
+    params = {}
+    headers = {'User-Agent': USER_AGENT, 'content-type': 'application/json'}
+    session = requests.Session()
+    retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
+    session.mount("https://", HTTPAdapter(max_retries=retries))
+
+    try:
+        result = session.get(endpoint_url, params=params, headers=headers, stream=True, timeout=(3.0, 15))
+        result.raise_for_status()
+        json_data = result.json()
+        return json_data if json_data else None
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
+
+class ModelInformation:
+    def __init__(self, json_data):
+        self.model_version_id = json_data.get("id", "")
+        self.model_id = json_data.get("modelId", "")
+        self.download_url = json_data.get("downloadUrl", "")
+        self.model_url = f"https://civitai.com/models/{self.model_id}?modelVersionId={self.model_version_id}"
+        self.filename_url = next(
+            (v.get("name", "") for v in json_data.get("files", []) if str(self.model_version_id) in v.get("downloadUrl", "")), ""
+        )
+        self.filename_url = self.filename_url if self.filename_url else ""
+        self.description = json_data.get("description", "")
+        if self.description is None: self.description = ""
+        self.model_name = json_data.get("model", {}).get("name", "")
+        self.model_type = json_data.get("model", {}).get("type", "")
+        self.nsfw = json_data.get("model", {}).get("nsfw", False)
+        self.poi = json_data.get("model", {}).get("poi", False)
+        self.images = [img.get("url", "") for img in json_data.get("images", [])]
+        self.example_prompt = json_data.get("trainedWords", [""])[0] if json_data.get("trainedWords") else ""
+        self.original_json = copy.deepcopy(json_data)
+
+
+def retrieve_model_info(url):
+    json_data = request_json_data(url)
+    if not json_data:
+        return None
+    model_descriptor = ModelInformation(json_data)
+    return model_descriptor
+
+
+def download_things(directory, url, hf_token="", civitai_api_key="", romanize=False):
     url = url.strip()
+    downloaded_file_path = None
 
     if "drive.google.com" in url:
         original_dir = os.getcwd()
@@ -29,20 +91,95 @@ def download_things(directory, url, hf_token="", civitai_api_key=""):
         if "/blob/" in url:
             url = url.replace("/blob/", "/resolve/")
         user_header = f'"Authorization: Bearer {hf_token}"'
+
+        filename = unidecode(url.split('/')[-1]) if romanize else url.split('/')[-1]
+
         if hf_token:
-            os.system(f"aria2c --console-log-level=error --summary-interval=10 --header={user_header} -c -x 16 -k 1M -s 16 {url} -d {directory}  -o {url.split('/')[-1]}")
+            os.system(f"aria2c --console-log-level=error --summary-interval=10 --header={user_header} -c -x 16 -k 1M -s 16 {url} -d {directory}  -o {filename}")
         else:
-            os.system(f"aria2c --optimize-concurrent-downloads --console-log-level=error --summary-interval=10 -c -x 16 -k 1M -s 16 {url} -d {directory}  -o {url.split('/')[-1]}")
+            os.system(f"aria2c --optimize-concurrent-downloads --console-log-level=error --summary-interval=10 -c -x 16 -k 1M -s 16 {url} -d {directory}  -o {filename}")
+
+        downloaded_file_path = os.path.join(directory, filename)
+
     elif "civitai.com" in url:
-        if "?" in url:
-            url = url.split("?")[0]
-        if civitai_api_key:
-            url = url + f"?token={civitai_api_key}"
-            os.system(f"aria2c --console-log-level=error --summary-interval=10 -c -x 16 -k 1M -s 16 -d {directory} {url}")
-        else:
+
+        if not civitai_api_key:
             print("\033[91mYou need an API key to download Civitai models.\033[0m")
+
+        model_profile = retrieve_model_info(url)
+        if model_profile.download_url and model_profile.filename_url:
+            url = model_profile.download_url
+            filename = unidecode(model_profile.filename_url) if romanize else model_profile.filename_url
+        else:
+            if "?" in url:
+                url = url.split("?")[0]
+            filename = ""
+
+        url_dl = url + f"?token={civitai_api_key}"
+        print(f"Filename: {filename}")
+
+        param_filename = ""
+        if filename:
+            param_filename = f"-o '{filename}'"
+
+        aria2_command = (
+            f'aria2c --console-log-level=error --summary-interval=10 -c -x 16 '
+            f'-k 1M -s 16 -d "{directory}" {param_filename} "{url_dl}"'
+        )
+        os.system(aria2_command)
+
+        if param_filename and os.path.exists(os.path.join(directory, filename)):
+            downloaded_file_path = os.path.join(directory, filename)
+
+        # # PLAN B
+        # # Follow the redirect to get the actual download URL
+        # curl_command = (
+        #     f'curl -L -sI --connect-timeout 5 --max-time 5 '
+        #     f'-H "Content-Type: application/json" '
+        #     f'-H "Authorization: Bearer {civitai_api_key}" "{url}"'
+        # )
+
+        # headers = os.popen(curl_command).read()
+
+        # # Look for the redirected "Location" URL
+        # location_match = re.search(r'location: (.+)', headers, re.IGNORECASE)
+
+        # if location_match:
+        #     redirect_url = location_match.group(1).strip()
+
+        #     # Extract the filename from the redirect URL's "Content-Disposition"
+        #     filename_match = re.search(r'filename%3D%22(.+?)%22', redirect_url)
+        #     if filename_match:
+        #         encoded_filename = filename_match.group(1)
+        #         # Decode the URL-encoded filename
+        #         decoded_filename = urllib.parse.unquote(encoded_filename)
+
+        #         filename = unidecode(decoded_filename) if romanize else decoded_filename
+        #         print(f"Filename: {filename}")
+
+        #         aria2_command = (
+        #             f'aria2c --console-log-level=error --summary-interval=10 -c -x 16 '
+        #             f'-k 1M -s 16 -d "{directory}" -o "{filename}" "{redirect_url}"'
+        #         )
+        #         return_code = os.system(aria2_command)
+
+        #         # if return_code != 0:
+        #         #     raise RuntimeError(f"Failed to download file: {filename}. Error code: {return_code}")
+        #         downloaded_file_path = os.path.join(directory, filename)
+        #         if not os.path.exists(downloaded_file_path):
+        #             downloaded_file_path = None
+
+        # if not downloaded_file_path:
+        #     # Old method
+        #     if "?" in url:
+        #         url = url.split("?")[0]
+        #     url = url + f"?token={civitai_api_key}"
+        #     os.system(f"aria2c --console-log-level=error --summary-interval=10 -c -x 16 -k 1M -s 16 -d {directory} {url}")
+
     else:
         os.system(f"aria2c --console-log-level=error --summary-interval=10 -c -x 16 -k 1M -s 16 -d {directory} {url}")
+
+    return downloaded_file_path
 
 
 def get_model_list(directory_path):
@@ -102,13 +239,17 @@ def extract_parameters(input_string):
     return parameters
 
 
-def get_my_lora(link_url):
+def get_my_lora(link_url, romanize):
     for url in [url.strip() for url in link_url.split(',')]:
         if not os.path.exists(f"./loras/{url.split('/')[-1]}"):
-            download_things(DIRECTORY_LORAS, url, HF_TOKEN, CIVITAI_API_KEY)
+            l_name = download_things(DIRECTORY_LORAS, url, HF_TOKEN, CIVITAI_API_KEY, romanize)
     new_lora_model_list = get_model_list(DIRECTORY_LORAS)
     new_lora_model_list.insert(0, "None")
     new_lora_model_list = new_lora_model_list + DIFFUSERS_FORMAT_LORAS
+    msg_lora = "Downloaded"
+    if l_name:
+        msg_lora += f": <b>{l_name}</b>"
+        print(msg_lora)
 
     return gr.update(
         choices=new_lora_model_list
@@ -120,7 +261,9 @@ def get_my_lora(link_url):
         choices=new_lora_model_list
     ), gr.update(
         choices=new_lora_model_list
-    ),
+    ), gr.update(
+        value=msg_lora
+    )
 
 
 def info_html(json_data, title, subtitle):
@@ -148,9 +291,17 @@ def get_model_type(repo_id: str):
     return default
 
 
-def restart_space(repo_id: str, factory_reboot: bool, token: str):
-    api = HfApi(token=token)
-    api.restart_space(repo_id=repo_id, factory_reboot=factory_reboot)
+def restart_space(repo_id: str, factory_reboot: bool):
+    api = HfApi(token=os.environ.get("HF_TOKEN"))
+    try:
+        runtime = api.get_space_runtime(repo_id=repo_id)
+        if runtime.stage == "RUNNING":
+            api.restart_space(repo_id=repo_id, factory_reboot=factory_reboot)
+            print(f"Restarting space: {repo_id}")
+        else:
+            print(f"Space {repo_id} is in stage: {runtime.stage}")
+    except Exception as e:
+        print(e)
 
 
 def extract_exif_data(image):
