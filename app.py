@@ -176,7 +176,7 @@ class GuiSD:
 
                 if self.model.base_model_id != model_name:
                     load_now_time = datetime.now()
-                    elapsed_time = (load_now_time - self.last_load).total_seconds()
+                    elapsed_time = max((load_now_time - self.last_load).total_seconds(), 0)
 
                     if elapsed_time <= 8:
                         print("Waiting for the previous model's time ops...")
@@ -205,7 +205,7 @@ class GuiSD:
         yield f"Model loaded: {model_name}"
 
     # @spaces.GPU(duration=59)
-    # @torch.inference_mode()
+    @torch.inference_mode()
     def generate_pipeline(
         self,
         prompt,
@@ -519,7 +519,7 @@ class GuiSD:
 
 def dynamic_gpu_duration(func, duration, *args):
 
-    @torch.inference_mode()
+    # @torch.inference_mode()
     @spaces.GPU(duration=duration)
     def wrapped_func():
         yield from func(*args)
