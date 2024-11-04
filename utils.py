@@ -232,9 +232,9 @@ def extract_parameters(input_string):
         parameters['height'] = height
 
     # Extracting other parameters
-    other_parameters = re.findall(r'(\w+): (.*?)(?=, \w+|$)', input_string)
+    other_parameters = re.findall(r'([^,:]+): (.*?)(?=, [^,:]+:|$)', input_string)
     for param in other_parameters:
-        parameters[param[0]] = param[1].strip('"')
+        parameters[param[0].strip()] = param[1].strip('"')
 
     return parameters
 
@@ -419,3 +419,8 @@ def html_template_message(msg):
             </div>
         </div>
         """
+
+
+def escape_html(text):
+    """Escapes HTML special characters in the input text."""
+    return text.replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
