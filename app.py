@@ -1,6 +1,11 @@
 import spaces
 import os
-from stablepy import Model_Diffusers
+from stablepy import (
+    Model_Diffusers,
+    SCHEDULE_TYPE_OPTIONS,
+    SCHEDULE_PREDICTION_TYPE_OPTIONS,
+    check_scheduler_compatibility,
+)
 from constants import (
     DIRECTORY_MODELS,
     DIRECTORY_LORAS,
@@ -51,6 +56,7 @@ from utils import (
     download_diffuser_repo,
     progress_step_bar,
     html_template_message,
+    escape_html,
 )
 from datetime import datetime
 import gradio as gr
@@ -95,6 +101,7 @@ lora_model_list = get_model_list(DIRECTORY_LORAS)
 lora_model_list.insert(0, "None")
 lora_model_list = lora_model_list + DIFFUSERS_FORMAT_LORAS
 vae_model_list = get_model_list(DIRECTORY_VAES)
+vae_model_list.insert(0, "BakedVAE")
 vae_model_list.insert(0, "None")
 
 print('\033[33m🏁 Download and listing of valid models completed.\033[0m')
@@ -153,7 +160,12 @@ class GuiSD:
 
         yield f"Loading model: {model_name}"
 
-        if vae_model:
+        if vae_model == "BakedVAE":
+            if not os.path.exists(model_name):
+                vae_model = model_name
+            else:
+                vae_model = None
+        elif vae_model:
             vae_type = "SDXL" if "sdxl" in vae_model.lower() else "SD 1.5"
             if model_type != vae_type:
                 gr.Warning(WARNING_MSG_VAE)
@@ -226,6 +238,8 @@ class GuiSD:
         lora5,
         lora_scale5,
         sampler,
+        schedule_type,
+        schedule_prediction_type,
         img_height,
         img_width,
         model_name,
@@ -265,6 +279,7 @@ class GuiSD:
         image_previews,
         display_images,
         save_generated_images,
+        filename_pattern,
         image_storage_location,
         retain_compel_previous_load,
         retain_detailfix_model_previous_load,
@@ -334,14 +349,15 @@ class GuiSD:
             (image_ip2, mask_ip2, model_ip2, mode_ip2, scale_ip2),
         ]
 
-        for imgip, mskip, modelip, modeip, scaleip in all_adapters:
-            if imgip:
-                params_ip_img.append(imgip)
-                if mskip:
-                    params_ip_msk.append(mskip)
-                params_ip_model.append(modelip)
-                params_ip_mode.append(modeip)
-                params_ip_scale.append(scaleip)
+        if not hasattr(self.model.pipe, "transformer"):
+            for imgip, mskip, modelip, modeip, scaleip in all_adapters:
+                if imgip:
+                    params_ip_img.append(imgip)
+                    if mskip:
+                        params_ip_msk.append(mskip)
+                    params_ip_model.append(modelip)
+                    params_ip_mode.append(modeip)
+                    params_ip_scale.append(scaleip)
 
         concurrency = 5
         self.model.stream_config(concurrency=concurrency, latent_resize_by=1, vae_decoding=False)
@@ -430,6 +446,8 @@ class GuiSD:
             "textual_inversion": embed_list if textual_inversion else [],
             "syntax_weights": syntax_weights,  # "Classic"
             "sampler": sampler,
+            "schedule_type": schedule_type,
+            "schedule_prediction_type": schedule_prediction_type,
             "xformers_memory_efficient_attention": xformers_memory_efficient_attention,
             "gui_active": True,
             "loop_generation": loop_generation,
@@ -447,6 +465,7 @@ class GuiSD:
             "image_previews": image_previews,
             "display_images": display_images,
             "save_generated_images": save_generated_images,
+            "filename_pattern": filename_pattern,
             "image_storage_location": image_storage_location,
             "retain_compel_previous_load": retain_compel_previous_load,
             "retain_detailfix_model_previous_load": retain_detailfix_model_previous_load,
@@ -479,7 +498,7 @@ class GuiSD:
 
         actual_progress = 0
         info_images = gr.update()
-        for img, seed, image_path, metadata in self.model(**pipe_params):
+        for img, [seed, image_path, metadata] in self.model(**pipe_params):
             info_state = progress_step_bar(actual_progress, steps)
             actual_progress += concurrency
             if image_path:
@@ -501,7 +520,7 @@ class GuiSD:
                 if msg_lora:
                     info_images += msg_lora
 
-                info_images = info_images + "<br>" + "GENERATION DATA:<br>" + metadata[0].replace("\n", "<br>") + "<br>-------<br>"
+                info_images = info_images + "<br>" + "GENERATION DATA:<br>" + escape_html(metadata[0]) + "<br>-------<br>"
 
                 download_links = "<br>".join(
                     [
@@ -561,6 +580,14 @@ def sd_gen_generate_pipeline(*args):
             lora_E=lora_list[4], lora_scale_E=args[16],
         )
         print(lora_status)
+
+    sampler_name = args[17]
+    schedule_type_name = args[18]
+    _, _, msg_sampler = check_scheduler_compatibility(
+        sd_gen.model.class_name, sampler_name, schedule_type_name
+    )
+    if msg_sampler:
+        gr.Warning(msg_sampler)
 
     if verbose_arg:
         for status, lora in zip(lora_status, lora_list):
@@ -688,7 +715,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             with gr.Column(scale=1):
                 steps_gui = gr.Slider(minimum=1, maximum=100, step=1, value=30, label="Steps")
                 cfg_gui = gr.Slider(minimum=0, maximum=30, step=0.5, value=7., label="CFG")
-                sampler_gui = gr.Dropdown(label="Sampler", choices=scheduler_names, value="Euler a")
+                sampler_gui = gr.Dropdown(label="Sampler", choices=scheduler_names, value="Euler")
+                schedule_type_gui = gr.Dropdown(label="Schedule type", choices=SCHEDULE_TYPE_OPTIONS, value=SCHEDULE_TYPE_OPTIONS[0])
                 img_width_gui = gr.Slider(minimum=64, maximum=4096, step=8, value=1024, label="Img Width")
                 img_height_gui = gr.Slider(minimum=64, maximum=4096, step=8, value=1024, label="Img Height")
                 seed_gui = gr.Number(minimum=-1, maximum=9999999999, value=-1, label="Seed")
@@ -707,14 +735,26 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                             "width": gr.update(value=1024),
                             "height": gr.update(value=1024),
                             "Seed": gr.update(value=-1),
-                            "Sampler": gr.update(value="Euler a"),
-                            "scale": gr.update(value=7.),  # cfg
-                            "skip": gr.update(value=True),
+                            "Sampler": gr.update(value="Euler"),
+                            "CFG scale": gr.update(value=7.),  # cfg
+                            "Clip skip": gr.update(value=True),
                             "Model": gr.update(value=name_model),
+                            "Schedule type": gr.update(value="Automatic"),
+                            "PAG": gr.update(value=.0),
+                            "FreeU": gr.update(value=False),
                         }
                         valid_keys = list(valid_receptors.keys())
 
                         parameters = extract_parameters(base_prompt)
+                        # print(parameters)
+
+                        if "Sampler" in parameters:
+                            value_sampler = parameters["Sampler"]
+                            for s_type in SCHEDULE_TYPE_OPTIONS:
+                                if s_type in value_sampler:
+                                    value_sampler = value_sampler.replace(s_type, "").strip()
+                                    parameters["Sampler"] = value_sampler
+                                    parameters["Schedule type"] = s_type
 
                         for key, val in parameters.items():
                             # print(val)
@@ -723,7 +763,10 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                                     if key == "Sampler":
                                         if val not in scheduler_names:
                                             continue
-                                    elif key == "skip":
+                                    if key == "Schedule type":
+                                        if val not in SCHEDULE_TYPE_OPTIONS:
+                                            val = "Automatic"
+                                    elif key == "Clip skip":
                                         if "," in str(val):
                                             val = val.replace(",", "")
                                         if int(val) >= 2:
@@ -736,7 +779,9 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                                         val = re.sub(r'\s+', ' ', re.sub(r',+', ',', val)).strip()
                                     if key in ["Steps", "width", "height", "Seed"]:
                                         val = int(val)
-                                    if key == "scale":
+                                    if key == "FreeU":
+                                        val = True
+                                    if key in ["CFG scale", "PAG"]:
                                         val = float(val)
                                     if key == "Model":
                                         filtered_models = [m for m in model_list if val in m]
@@ -765,6 +810,9 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                             cfg_gui,
                             clip_skip_gui,
                             model_name_gui,
+                            schedule_type_gui,
+                            pag_scale_gui,
+                            free_u_gui,
                         ],
                     )
 
@@ -816,9 +864,14 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     lora_scale_5_gui = lora_scale_slider("Lora Scale 5")
 
                     with gr.Accordion("From URL", open=False, visible=True):
-                        text_lora = gr.Textbox(label="LoRA URL", placeholder="https://civitai.com/api/download/models/28907", lines=1)
+                        text_lora = gr.Textbox(
+                            label="LoRA's download URL",
+                            placeholder="https://civitai.com/api/download/models/28907",
+                            lines=1,
+                            info="It has to be .safetensors files, and you can also download them from Hugging Face.",
+                        )
                         romanize_text = gr.Checkbox(value=False, label="Transliterate name")
-                        button_lora = gr.Button("Obtain and refresh the LoRAs lists")
+                        button_lora = gr.Button("Get and Refresh the LoRA Lists")
                         new_lora_status = gr.HTML()
                         button_lora.click(
                             get_my_lora,
@@ -851,7 +904,10 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         minimum=0.01, maximum=1.0, step=0.01, value=0.55, label="Strength",
                         info="This option adjusts the level of changes for img2img and inpainting."
                     )
-                    image_resolution_gui = gr.Slider(minimum=64, maximum=2048, step=64, value=1024, label="Image Resolution")
+                    image_resolution_gui = gr.Slider(
+                        minimum=64, maximum=2048, step=64, value=1024, label="Image Resolution",
+                        info="The maximum proportional size of the generated image based on the uploaded image."
+                    )
                     preprocessor_name_gui = gr.Dropdown(label="Preprocessor Name", choices=PREPROCESSOR_CONTROLNET["canny"])
 
                     def change_preprocessor_choices(task):
@@ -950,7 +1006,9 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         mask_padding_b_gui = gr.Number(label="Mask padding:", value=32, minimum=1)
 
                 with gr.Accordion("Other settings", open=False, visible=True):
+                    schedule_prediction_type_gui = gr.Dropdown(label="Discrete Sampling Type", choices=SCHEDULE_PREDICTION_TYPE_OPTIONS, value=SCHEDULE_PREDICTION_TYPE_OPTIONS[0])
                     save_generated_images_gui = gr.Checkbox(value=True, label="Create a download link for the images")
+                    filename_pattern_gui = gr.Textbox(label="Filename pattern", value="model,seed", placeholder="model,seed,sampler,schedule_type,img_width,img_height,guidance_scale,num_steps,vae,prompt_section,neg_prompt_section", lines=1)
                     hires_before_adetailer_gui = gr.Checkbox(value=False, label="Hires Before Adetailer")
                     hires_after_adetailer_gui = gr.Checkbox(value=True, label="Hires After Adetailer")
                     generator_in_cpu_gui = gr.Checkbox(value=False, label="Generator in CPU")
@@ -1102,6 +1160,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             lora5_gui,
             lora_scale_5_gui,
             sampler_gui,
+            schedule_type_gui,
+            schedule_prediction_type_gui,
             img_height_gui,
             img_width_gui,
             model_name_gui,
@@ -1141,6 +1201,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             image_previews_gui,
             display_images_gui,
             save_generated_images_gui,
+            filename_pattern_gui,
             image_storage_location_gui,
             retain_compel_previous_load_gui,
             retain_detailfix_model_previous_load_gui,
