@@ -35,6 +35,8 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'John6666/noobai-xl-nai-xl-vpredtestversion-sdxl',
     'John6666/chadmix-noobai075-illustrious01-v10-sdxl',
     'OnomaAIResearch/Illustrious-xl-early-release-v0',
+    'John6666/illustriousxl-mmmix-v50-sdxl',
+    'John6666/illustrious-pencil-xl-v200-sdxl',
     'John6666/obsession-illustriousxl-v21-sdxl',
     'eienmojiki/Anything-XL',
     'eienmojiki/Starry-XL-v5.2',
@@ -113,6 +115,7 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
 DIFFUSERS_FORMAT_LORAS = [
     "nerijs/animation2k-flux",
     "XLabs-AI/flux-RealismLora",
+    "Shakker-Labs/FLUX.1-dev-LoRA-Logo-Design",
 ]
 
 DOWNLOAD_EMBEDS = [
@@ -288,7 +291,9 @@ MODEL_TYPE_CLASS = {
     "diffusers:FluxPipeline": "FLUX",
 }
 
-POST_PROCESSING_SAMPLER = ["Use same sampler"] + scheduler_names[:-2]
+POST_PROCESSING_SAMPLER = ["Use same sampler"] + [
+    name_s for name_s in scheduler_names if "Auto-Loader" not in name_s
+]
 
 SUBTITLE_GUI = (
     "### This demo uses [diffusers](https://github.com/huggingface/diffusers)"
