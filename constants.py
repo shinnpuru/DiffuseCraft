@@ -7,10 +7,10 @@ from stablepy import (
 )
 
 # - **Download Models**
-DOWNLOAD_MODEL = "https://civitai.com/api/download/models/574369, https://huggingface.co/TechnoByte/MilkyWonderland/resolve/main/milkyWonderland_v40.safetensors"
+DOWNLOAD_MODEL = "https://huggingface.co/TechnoByte/MilkyWonderland/resolve/main/milkyWonderland_v40.safetensors"
 
 # - **Download VAEs**
-DOWNLOAD_VAE = "https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-c-1.1-b-0.5.safetensors?download=true, https://huggingface.co/nubby/blessed-sdxl-vae-fp16-fix/resolve/main/sdxl_vae-fp16fix-blessed.safetensors?download=true, https://huggingface.co/digiplay/VAE/resolve/main/vividReal_v20.safetensors?download=true, https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true"
+DOWNLOAD_VAE = "https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true"
 
 # - **Download LoRAs**
 DOWNLOAD_LORA = "https://huggingface.co/Leopain/color/resolve/main/Coloring_book_-_LineArt.safetensors, https://civitai.com/api/download/models/135867, https://huggingface.co/Linaqruf/anime-detailer-xl-lora/resolve/main/anime-detailer-xl.safetensors?download=true, https://huggingface.co/Linaqruf/style-enhancer-xl-lora/resolve/main/style-enhancer-xl.safetensors?download=true, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SD15-8steps-CFG-lora.safetensors?download=true, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SDXL-8steps-CFG-lora.safetensors?download=true"
@@ -38,6 +38,7 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'John6666/illustriousxl-mmmix-v50-sdxl',
     'John6666/illustrious-pencil-xl-v200-sdxl',
     'John6666/obsession-illustriousxl-v21-sdxl',
+    'John6666/obsession-illustriousxl-v30-sdxl',
     'eienmojiki/Anything-XL',
     'eienmojiki/Starry-XL-v5.2',
     'John6666/meinaxl-v2-sdxl',
@@ -120,8 +121,8 @@ DIFFUSERS_FORMAT_LORAS = [
 
 DOWNLOAD_EMBEDS = [
     'https://huggingface.co/datasets/Nerfgun3/bad_prompt/blob/main/bad_prompt_version2.pt',
-    'https://huggingface.co/embed/negative/resolve/main/EasyNegativeV2.safetensors',
-    'https://huggingface.co/embed/negative/resolve/main/bad-hands-5.pt',
+    # 'https://huggingface.co/embed/negative/resolve/main/EasyNegativeV2.safetensors',
+    # 'https://huggingface.co/embed/negative/resolve/main/bad-hands-5.pt',
     ]
 
 CIVITAI_API_KEY = os.environ.get("CIVITAI_API_KEY")
