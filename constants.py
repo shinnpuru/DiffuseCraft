@@ -24,7 +24,9 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'John6666/lyh-anime-flux-v2a1-fp8-flux',
     'John6666/carnival-unchained-v10-fp8-flux',
     'Freepik/flux.1-lite-8B-alpha',
-    'ostris/OpenFLUX.1',
+    'shauray/FluxDev-HyperSD-merged',
+    'mikeyandfriends/PixelWave_FLUX.1-dev_03',
+    'terminusresearch/FluxBooru-v0.3',
     'John6666/noobai-xl-nai-xl-epsilonpred10version-sdxl',
     'John6666/noobai-xl-nai-xl-epsilonpred075version-sdxl',
     'John6666/noobai-xl-nai-xl-epsilonpred05version-sdxl',
@@ -87,6 +89,8 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'yodayo-ai/kivotos-xl-2.0',
     'yodayo-ai/holodayo-xl-2.1',
     'yodayo-ai/clandestine-xl-1.0',
+    'ostris/OpenFLUX.1',
+    'shuttleai/shuttle-3-diffusion',
     'digiplay/majicMIX_sombre_v2',
     'digiplay/majicMIX_realistic_v6',
     'digiplay/majicMIX_realistic_v7',
@@ -290,6 +294,13 @@ MODEL_TYPE_CLASS = {
     "diffusers:StableDiffusionPipeline": "SD 1.5",
     "diffusers:StableDiffusionXLPipeline": "SDXL",
     "diffusers:FluxPipeline": "FLUX",
+}
+
+DIFFUSECRAFT_CHECKPOINT_NAME = {
+    "sd1.5": "SD 1.5",
+    "sdxl": "SDXL",
+    "flux-dev": "FLUX",
+    "flux-schnell": "FLUX",
 }
 
 POST_PROCESSING_SAMPLER = ["Use same sampler"] + [
