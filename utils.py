@@ -7,11 +7,14 @@ from constants import (
     HF_TOKEN,
     MODEL_TYPE_CLASS,
     DIRECTORY_LORAS,
+    DIFFUSECRAFT_CHECKPOINT_NAME,
 )
 from huggingface_hub import HfApi
+from huggingface_hub import snapshot_download
 from diffusers import DiffusionPipeline
 from huggingface_hub import model_info as model_info_data
 from diffusers.pipelines.pipeline_loading_utils import variant_compatible_siblings
+from stablepy.diffusers_vanilla.utils import checkpoint_model_type
 from pathlib import PosixPath
 from unidecode import unidecode
 import urllib.parse
@@ -283,10 +286,15 @@ def get_model_type(repo_id: str):
     api = HfApi(token=os.environ.get("HF_TOKEN"))  # if use private or gated model
     default = "SD 1.5"
     try:
-        model = api.model_info(repo_id=repo_id, timeout=5.0)
-        tags = model.tags
-        for tag in tags:
-            if tag in MODEL_TYPE_CLASS.keys(): return MODEL_TYPE_CLASS.get(tag, default)
+        if os.path.exists(repo_id):
+            tag = checkpoint_model_type(repo_id)
+            return DIFFUSECRAFT_CHECKPOINT_NAME[tag]
+        else:
+            model = api.model_info(repo_id=repo_id, timeout=5.0)
+            tags = model.tags
+            for tag in tags:
+                if tag in MODEL_TYPE_CLASS.keys(): return MODEL_TYPE_CLASS.get(tag, default)
+
     except Exception:
         return default
     return default
@@ -371,17 +379,23 @@ def download_diffuser_repo(repo_name: str, model_type: str, revision: str = "mai
         if len(variant_filenames):
             variant = "fp16"
 
-    cached_folder = DiffusionPipeline.download(
-        pretrained_model_name=repo_name,
-        force_download=False,
-        token=token,
-        revision=revision,
-        # mirror="https://hf-mirror.com",
-        variant=variant,
-        use_safetensors=True,
-        trust_remote_code=False,
-        timeout=5.0,
-    )
+    if model_type == "FLUX":
+        cached_folder = snapshot_download(
+            repo_id=repo_name,
+            allow_patterns="transformer/*"
+        )
+    else:
+        cached_folder = DiffusionPipeline.download(
+            pretrained_model_name=repo_name,
+            force_download=False,
+            token=token,
+            revision=revision,
+            # mirror="https://hf-mirror.com",
+            variant=variant,
+            use_safetensors=True,
+            trust_remote_code=False,
+            timeout=5.0,
+        )
 
     if isinstance(cached_folder, PosixPath):
         cached_folder = cached_folder.as_posix()
