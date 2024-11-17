@@ -17,22 +17,34 @@ DOWNLOAD_LORA = "https://huggingface.co/Leopain/color/resolve/main/Coloring_book
 
 LOAD_DIFFUSERS_FORMAT_MODEL = [
     'stabilityai/stable-diffusion-xl-base-1.0',
+    'Laxhar/noobai-XL-1.0',
     'black-forest-labs/FLUX.1-dev',
     'John6666/blue-pencil-flux1-v021-fp8-flux',
     'John6666/wai-ani-flux-v10forfp8-fp8-flux',
     'John6666/xe-anime-flux-v04-fp8-flux',
     'John6666/lyh-anime-flux-v2a1-fp8-flux',
     'John6666/carnival-unchained-v10-fp8-flux',
+    'John6666/iniverse-mix-xl-sfwnsfw-fluxdfp16nsfwv11-fp8-flux',
     'Freepik/flux.1-lite-8B-alpha',
     'shauray/FluxDev-HyperSD-merged',
     'mikeyandfriends/PixelWave_FLUX.1-dev_03',
     'terminusresearch/FluxBooru-v0.3',
+    'ostris/OpenFLUX.1',
+    'shuttleai/shuttle-3-diffusion',
     'John6666/noobai-xl-nai-xl-epsilonpred10version-sdxl',
+    'Laxhar/noobai-XL-0.77',
     'John6666/noobai-xl-nai-xl-epsilonpred075version-sdxl',
+    'Laxhar/noobai-XL-0.6',
     'John6666/noobai-xl-nai-xl-epsilonpred05version-sdxl',
     'John6666/noobai-cyberfix-v10-sdxl',
     'John6666/noobaiiter-xl-vpred-v075-sdxl',
+    'John6666/ntr-mix-illustrious-xl-noob-xl-v40-sdxl',
+    'John6666/ntr-mix-illustrious-xl-noob-xl-ntrmix35-sdxl',
+    'John6666/haruki-mix-illustrious-v10-sdxl',
+    'John6666/noobreal-v10-sdxl',
     'John6666/complicated-noobai-merge-vprediction-sdxl',
+    'Laxhar/noobai-XL-Vpred-0.6',
+    'John6666/noobai-xl-nai-xl-vpred05version-sdxl',
     'John6666/noobai-fusion2-vpred-itercomp-v1-sdxl',
     'John6666/noobai-xl-nai-xl-vpredtestversion-sdxl',
     'John6666/chadmix-noobai075-illustrious01-v10-sdxl',
@@ -41,9 +53,15 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'John6666/illustrious-pencil-xl-v200-sdxl',
     'John6666/obsession-illustriousxl-v21-sdxl',
     'John6666/obsession-illustriousxl-v30-sdxl',
+    'John6666/wai-nsfw-illustrious-v70-sdxl',
+    'John6666/illustrious-pony-mix-v3-sdxl',
+    'John6666/nova-anime-xl-illustriousv10-sdxl',
+    'John6666/silvermoon-mix03-illustrious-v10-sdxl',
     'eienmojiki/Anything-XL',
     'eienmojiki/Starry-XL-v5.2',
     'John6666/meinaxl-v2-sdxl',
+    'Eugeoter/artiwaifu-diffusion-2.0',
+    'comin/IterComp',
     'John6666/epicrealism-xl-v10kiss2-sdxl',
     'John6666/epicrealism-xl-v8kiss-sdxl',
     'misri/zavychromaxl_v80',
@@ -51,21 +69,22 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'SG161222/RealVisXL_V5.0',
     'misri/newrealityxlAllInOne_Newreality40',
     'gsdf/CounterfeitXL',
-    'John6666/silvermoon-mix-01xl-v11-sdxl',
     'WhiteAiZ/autismmixSDXL_autismmixConfetti_diffusers',
     'kitty7779/ponyDiffusionV6XL',
     'GraydientPlatformAPI/aniverse-pony',
     'John6666/ras-real-anime-screencap-v1-sdxl',
     'John6666/duchaiten-pony-xl-no-score-v60-sdxl',
     'John6666/mistoon-anime-ponyalpha-sdxl',
-    'John6666/3x3x3mixxl-v2-sdxl',
-    'John6666/3x3x3mixxl-3dv01-sdxl',
     'John6666/ebara-mfcg-pony-mix-v12-sdxl',
     'John6666/t-ponynai3-v51-sdxl',
     'John6666/t-ponynai3-v65-sdxl',
     'John6666/prefect-pony-xl-v3-sdxl',
+    'John6666/prefect-pony-xl-v4-sdxl',
     'John6666/mala-anime-mix-nsfw-pony-xl-v5-sdxl',
+    'John6666/wai-ani-nsfw-ponyxl-v10-sdxl',
+    'John6666/wai-ani-nsfw-ponyxl-v9-sdxl',
     'John6666/wai-real-mix-v11-sdxl',
+    'John6666/babes-by-stable-yogi-ponyv3-sdxl',
     'John6666/wai-c-v6-sdxl',
     'John6666/iniverse-mix-xl-sfwnsfw-pony-guofeng-v43-sdxl',
     'John6666/sifw-annihilation-xl-v2-sdxl',
@@ -82,15 +101,11 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'John6666/duchaiten-pony-real-v11fix-sdxl',
     'John6666/duchaiten-pony-real-v20-sdxl',
     'John6666/duchaiten-pony-xl-no-score-v70-sdxl',
-    'Eugeoter/artiwaifu-diffusion-2.0',
-    'comin/IterComp',
     'KBlueLeaf/Kohaku-XL-Zeta',
     'cagliostrolab/animagine-xl-3.1',
     'yodayo-ai/kivotos-xl-2.0',
     'yodayo-ai/holodayo-xl-2.1',
     'yodayo-ai/clandestine-xl-1.0',
-    'ostris/OpenFLUX.1',
-    'shuttleai/shuttle-3-diffusion',
     'digiplay/majicMIX_sombre_v2',
     'digiplay/majicMIX_realistic_v6',
     'digiplay/majicMIX_realistic_v7',
@@ -136,6 +151,9 @@ DIRECTORY_MODELS = 'models'
 DIRECTORY_LORAS = 'loras'
 DIRECTORY_VAES = 'vaes'
 DIRECTORY_EMBEDS = 'embedings'
+
+CACHE_HF = "/home/user/.cache/huggingface/hub/"
+STORAGE_ROOT = "/home/user/"
 
 PREPROCESSOR_CONTROLNET = {
   "openpose": [
@@ -424,7 +442,7 @@ EXAMPLES_GUI = [
         0.35,  # strength
         1.0,  # cn scale
         0.05,  # cn start
-        0.75,  # cn end
+        0.8,  # cn end
         "Classic",
         None,
         35,
