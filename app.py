@@ -54,6 +54,8 @@ from utils import (
     extract_exif_data,
     create_mask_now,
     download_diffuser_repo,
+    get_used_storage_gb,
+    delete_model,
     progress_step_bar,
     html_template_message,
     escape_html,
@@ -95,8 +97,8 @@ embed_list = get_model_list(DIRECTORY_EMBEDS)
 embed_list = [
     (os.path.splitext(os.path.basename(emb))[0], emb) for emb in embed_list
 ]
-model_list = get_model_list(DIRECTORY_MODELS)
-model_list = LOAD_DIFFUSERS_FORMAT_MODEL + model_list
+single_file_model_list = get_model_list(DIRECTORY_MODELS)
+model_list = LOAD_DIFFUSERS_FORMAT_MODEL + single_file_model_list
 lora_model_list = get_model_list(DIRECTORY_LORAS)
 lora_model_list.insert(0, "None")
 lora_model_list = lora_model_list + DIFFUSERS_FORMAT_LORAS
@@ -130,8 +132,27 @@ class GuiSD:
         self.status_loading = False
         self.sleep_loading = 4
         self.last_load = datetime.now()
+        self.inventory = []
+
+    def update_storage_models(self, storage_floor_gb=42, required_inventory_for_purge=3):
+        while get_used_storage_gb() > storage_floor_gb:
+            if len(self.inventory) < required_inventory_for_purge:
+                break
+            removal_candidate = self.inventory.pop(0)
+            delete_model(removal_candidate)
+
+    def update_inventory(self, model_name):
+        if model_name not in single_file_model_list:
+            self.inventory = [
+                m for m in self.inventory if m != model_name
+            ] + [model_name]
+        print(self.inventory)
 
     def load_new_model(self, model_name, vae_model, task, progress=gr.Progress(track_tqdm=True)):
+
+        self.update_storage_models()
+
+        # download link model > model_name
 
         vae_model = vae_model if vae_model != "None" else None
         model_type = get_model_type(model_name)
@@ -144,6 +165,8 @@ class GuiSD:
                 revision="main",
                 token=True,
             )
+
+        self.update_inventory(model_name)
 
         for i in range(68):
             if not self.status_loading:
