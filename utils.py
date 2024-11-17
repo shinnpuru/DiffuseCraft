@@ -7,7 +7,10 @@ from constants import (
     HF_TOKEN,
     MODEL_TYPE_CLASS,
     DIRECTORY_LORAS,
+    DIRECTORY_MODELS,
     DIFFUSECRAFT_CHECKPOINT_NAME,
+    CACHE_HF,
+    STORAGE_ROOT,
 )
 from huggingface_hub import HfApi
 from huggingface_hub import snapshot_download
@@ -22,6 +25,8 @@ import copy
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
+import shutil
+import subprocess
 
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0'
 
@@ -110,7 +115,11 @@ def download_things(directory, url, hf_token="", civitai_api_key="", romanize=Fa
             print("\033[91mYou need an API key to download Civitai models.\033[0m")
 
         model_profile = retrieve_model_info(url)
-        if model_profile.download_url and model_profile.filename_url:
+        if (
+            model_profile is not None
+            and model_profile.download_url
+            and model_profile.filename_url
+        ):
             url = model_profile.download_url
             filename = unidecode(model_profile.filename_url) if romanize else model_profile.filename_url
         else:
@@ -314,7 +323,8 @@ def restart_space(repo_id: str, factory_reboot: bool):
 
 
 def extract_exif_data(image):
-    if image is None: return ""
+    if image is None:
+        return ""
 
     try:
         metadata_keys = ['parameters', 'metadata', 'prompt', 'Comment']
@@ -408,6 +418,37 @@ def download_diffuser_repo(repo_name: str, model_type: str, revision: str = "mai
     # )
 
     return cached_folder
+
+
+def get_folder_size_gb(folder_path):
+    result = subprocess.run(["du", "-s", folder_path], capture_output=True, text=True)
+
+    total_size_kb = int(result.stdout.split()[0])
+    total_size_gb = total_size_kb / (1024 ** 2)
+
+    return total_size_gb
+
+
+def get_used_storage_gb():
+    try:
+        used_gb = get_folder_size_gb(STORAGE_ROOT)
+        print(f"Used Storage: {used_gb:.2f} GB")
+    except Exception as e:
+        used_gb = 999
+        print(f"Error while retrieving the used storage: {e}.")
+
+    return used_gb
+
+
+def delete_model(removal_candidate):
+    print(f"Removing: {removal_candidate}")
+
+    if os.path.exists(removal_candidate):
+        os.remove(removal_candidate)
+    else:
+        diffusers_model = f"{CACHE_HF}{DIRECTORY_MODELS}--{removal_candidate.replace('/', '--')}"
+        if os.path.isdir(diffusers_model):
+            shutil.rmtree(diffusers_model)
 
 
 def progress_step_bar(step, total):
