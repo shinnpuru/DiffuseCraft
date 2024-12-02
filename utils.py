@@ -275,6 +275,10 @@ def get_my_lora(link_url, romanize):
     ), gr.update(
         choices=new_lora_model_list
     ), gr.update(
+        choices=new_lora_model_list
+    ), gr.update(
+        choices=new_lora_model_list
+    ), gr.update(
         value=msg_lora
     )
 
