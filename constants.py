@@ -17,7 +17,7 @@ DOWNLOAD_LORA = "https://huggingface.co/Leopain/color/resolve/main/Coloring_book
 
 LOAD_DIFFUSERS_FORMAT_MODEL = [
     'stabilityai/stable-diffusion-xl-base-1.0',
-    'Laxhar/noobai-XL-1.0',
+    'Laxhar/noobai-XL-1.1',
     'black-forest-labs/FLUX.1-dev',
     'John6666/blue-pencil-flux1-v021-fp8-flux',
     'John6666/wai-ani-flux-v10forfp8-fp8-flux',
@@ -31,6 +31,7 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'terminusresearch/FluxBooru-v0.3',
     'ostris/OpenFLUX.1',
     'shuttleai/shuttle-3-diffusion',
+    'Laxhar/noobai-XL-1.0',
     'John6666/noobai-xl-nai-xl-epsilonpred10version-sdxl',
     'Laxhar/noobai-XL-0.77',
     'John6666/noobai-xl-nai-xl-epsilonpred075version-sdxl',
@@ -43,6 +44,8 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'John6666/haruki-mix-illustrious-v10-sdxl',
     'John6666/noobreal-v10-sdxl',
     'John6666/complicated-noobai-merge-vprediction-sdxl',
+    'Laxhar/noobai-XL-Vpred-0.65s',
+    'Laxhar/noobai-XL-Vpred-0.65',
     'Laxhar/noobai-XL-Vpred-0.6',
     'John6666/noobai-xl-nai-xl-vpred05version-sdxl',
     'John6666/noobai-fusion2-vpred-itercomp-v1-sdxl',
@@ -84,7 +87,7 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'John6666/wai-ani-nsfw-ponyxl-v10-sdxl',
     'John6666/wai-ani-nsfw-ponyxl-v9-sdxl',
     'John6666/wai-real-mix-v11-sdxl',
-    'John6666/babes-by-stable-yogi-ponyv3-sdxl',
+    'John6666/wai-shuffle-pdxl-v2-sdxl',
     'John6666/wai-c-v6-sdxl',
     'John6666/iniverse-mix-xl-sfwnsfw-pony-guofeng-v43-sdxl',
     'John6666/sifw-annihilation-xl-v2-sdxl',
@@ -155,79 +158,6 @@ DIRECTORY_EMBEDS = 'embedings'
 CACHE_HF = "/home/user/.cache/huggingface/hub/"
 STORAGE_ROOT = "/home/user/"
 
-PREPROCESSOR_CONTROLNET = {
-  "openpose": [
-    "Openpose",
-    "None",
-  ],
-  "scribble": [
-    "HED",
-    "PidiNet",
-    "None",
-  ],
-  "softedge": [
-    "PidiNet",
-    "HED",
-    "HED safe",
-    "PidiNet safe",
-    "None",
-  ],
-  "segmentation": [
-    "UPerNet",
-    "None",
-  ],
-  "depth": [
-    "DPT",
-    "Midas",
-    "None",
-  ],
-  "normalbae": [
-    "NormalBae",
-    "None",
-  ],
-  "lineart": [
-    "Lineart",
-    "Lineart coarse",
-    "Lineart (anime)",
-    "None",
-    "None (anime)",
-  ],
-  "lineart_anime": [
-    "Lineart",
-    "Lineart coarse",
-    "Lineart (anime)",
-    "None",
-    "None (anime)",
-  ],
-  "shuffle": [
-    "ContentShuffle",
-    "None",
-  ],
-  "canny": [
-    "Canny",
-    "None",
-  ],
-  "mlsd": [
-    "MLSD",
-    "None",
-  ],
-  "ip2p": [
-    "ip2p"
-  ],
-  "recolor": [
-    "Recolor luminance",
-    "Recolor intensity",
-    "None",
-  ],
-  "tile": [
-    "Mild Blur",
-    "Moderate Blur",
-    "Heavy Blur",
-    "None",
-  ],
-
-}
-
 TASK_STABLEPY = {
     'txt2img': 'txt2img',
     'img2img': 'img2img',
@@ -284,9 +214,72 @@ UPSCALER_DICT_GUI = {
 
 UPSCALER_KEYS = list(UPSCALER_DICT_GUI.keys())
 
+DIFFUSERS_CONTROLNET_MODEL = [
+    "Automatic",
+
+    "xinsir/controlnet-union-sdxl-1.0",
+    "xinsir/anime-painter",
+    "Eugeoter/noob-sdxl-controlnet-canny",
+    "Eugeoter/noob-sdxl-controlnet-lineart_anime",
+    "Eugeoter/noob-sdxl-controlnet-depth",
+    "Eugeoter/noob-sdxl-controlnet-normal",
+    "Eugeoter/noob-sdxl-controlnet-softedge_hed",
+    "Eugeoter/noob-sdxl-controlnet-scribble_pidinet",
+    "Eugeoter/noob-sdxl-controlnet-scribble_hed",
+    "Eugeoter/noob-sdxl-controlnet-manga_line",
+    "Eugeoter/noob-sdxl-controlnet-lineart_realistic",
+    "Eugeoter/noob-sdxl-controlnet-depth_midas-v1-1",
+    "dimitribarbot/controlnet-openpose-sdxl-1.0-safetensors",
+    "r3gm/controlnet-openpose-sdxl-1.0-fp16",
+    "r3gm/controlnet-canny-scribble-integrated-sdxl-v2-fp16",
+    "r3gm/controlnet-union-sdxl-1.0-fp16",
+    "r3gm/controlnet-lineart-anime-sdxl-fp16",
+    "r3gm/control_v1p_sdxl_qrcode_monster_fp16",
+    "r3gm/controlnet-tile-sdxl-1.0-fp16",
+    "r3gm/controlnet-recolor-sdxl-fp16",
+    "r3gm/controlnet-openpose-twins-sdxl-1.0-fp16",
+    "r3gm/controlnet-qr-pattern-sdxl-fp16",
+    "brad-twinkl/controlnet-union-sdxl-1.0-promax",
+    "Yakonrus/SDXL_Controlnet_Tile_Realistic_v2",
+    "TheMistoAI/MistoLine",
+    "briaai/BRIA-2.3-ControlNet-Recoloring",
+    "briaai/BRIA-2.3-ControlNet-Canny",
+
+    "lllyasviel/control_v11p_sd15_openpose",
+    "lllyasviel/control_v11p_sd15_canny",
+    "lllyasviel/control_v11p_sd15_mlsd",
+    "lllyasviel/control_v11p_sd15_scribble",
+    "lllyasviel/control_v11p_sd15_softedge",
+    "lllyasviel/control_v11p_sd15_seg",
+    "lllyasviel/control_v11f1p_sd15_depth",
+    "lllyasviel/control_v11p_sd15_normalbae",
+    "lllyasviel/control_v11p_sd15_lineart",
+    "lllyasviel/control_v11p_sd15s2_lineart_anime",
+    "lllyasviel/control_v11e_sd15_shuffle",
+    "lllyasviel/control_v11e_sd15_ip2p",
+    "lllyasviel/control_v11p_sd15_inpaint",
+    "monster-labs/control_v1p_sd15_qrcode_monster",
+    "lllyasviel/control_v11f1e_sd15_tile",
+    "latentcat/control_v1p_sd15_brightness",
+    "yuanqiuye/qrcode_controlnet_v3",
+
+    "Shakker-Labs/FLUX.1-dev-ControlNet-Union-Pro",
+    # "Shakker-Labs/FLUX.1-dev-ControlNet-Pose",
+    # "Shakker-Labs/FLUX.1-dev-ControlNet-Depth",
+    # "jasperai/Flux.1-dev-Controlnet-Upscaler",
+    # "jasperai/Flux.1-dev-Controlnet-Depth",
+    # "jasperai/Flux.1-dev-Controlnet-Surface-Normals",
+    # "XLabs-AI/flux-controlnet-canny-diffusers",
+    # "XLabs-AI/flux-controlnet-hed-diffusers",
+    # "XLabs-AI/flux-controlnet-depth-diffusers",
+    # "InstantX/FLUX.1-dev-Controlnet-Union",
+    # "InstantX/FLUX.1-dev-Controlnet-Canny",
+]
+
 PROMPT_W_OPTIONS = [
     ("Compel format: (word)weight", "Compel"),
     ("Classic format: (word:weight)", "Classic"),
+    ("Classic-sd_embed format: (word:weight)", "Classic-sd_embed"),
     ("Classic-original format: (word:weight)", "Classic-original"),
     ("Classic-no_norm format: (word:weight)", "Classic-no_norm"),
     ("Classic-ignore", "Classic-ignore"),
@@ -371,7 +364,7 @@ EXAMPLES_GUI = [
         1.0,  # cn scale
         0.0,  # cn start
         1.0,  # cn end
-        "Classic",
+        "Classic-no_norm",
         "Nearest",
         45,
         False,
@@ -384,7 +377,7 @@ EXAMPLES_GUI = [
         -1,
         "None",
         0.33,
-        "FlowMatchEuler",
+        "FlowMatch Euler",
         1152,
         896,
         "black-forest-labs/FLUX.1-dev",
@@ -408,7 +401,7 @@ EXAMPLES_GUI = [
         -1,
         "None",
         0.33,
-        "DPM++ 2M SDE Lu",
+        "DPM++ 2M SDE Ef",
         1024,
         1024,
         "John6666/epicrealism-xl-v10kiss2-sdxl",
@@ -491,7 +484,7 @@ EXAMPLES_GUI = [
         1.0,  # cn scale
         0.0,  # cn start
         0.9,  # cn end
-        "Compel",
+        "Classic-original",
         "Latent (antialiased)",
         46,
         False,
