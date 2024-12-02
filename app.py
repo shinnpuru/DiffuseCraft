@@ -5,6 +5,7 @@ from stablepy import (
     SCHEDULE_TYPE_OPTIONS,
     SCHEDULE_PREDICTION_TYPE_OPTIONS,
     check_scheduler_compatibility,
+    TASK_AND_PREPROCESSORS,
 )
 from constants import (
     DIRECTORY_MODELS,
@@ -19,7 +20,6 @@ from constants import (
     DOWNLOAD_EMBEDS,
     CIVITAI_API_KEY,
     HF_TOKEN,
-    PREPROCESSOR_CONTROLNET,
     TASK_STABLEPY,
     TASK_MODEL_LIST,
     UPSCALER_DICT_GUI,
@@ -34,6 +34,7 @@ from constants import (
     EXAMPLES_GUI_HELP,
     EXAMPLES_GUI,
     RESOURCES,
+    DIFFUSERS_CONTROLNET_MODEL,
 )
 from stablepy.diffusers_vanilla.style_prompt_config import STYLE_NAMES
 import torch
@@ -60,15 +61,18 @@ from utils import (
     html_template_message,
     escape_html,
 )
+from image_processor import preprocessor_tab
 from datetime import datetime
 import gradio as gr
 import logging
 import diffusers
 import warnings
 from stablepy import logger
+from diffusers import FluxPipeline
 # import urllib.parse
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+torch.backends.cuda.matmul.allow_tf32 = True
 # os.environ["PYTORCH_NO_CUDA_MEMORY_CACHING"] = "1"
 print(os.getenv("SPACES_ZERO_GPU"))
 
@@ -107,6 +111,16 @@ vae_model_list.insert(0, "BakedVAE")
 vae_model_list.insert(0, "None")
 
 print('\033[33m🏁 Download and listing of valid models completed.\033[0m')
+
+flux_repo = "camenduru/FLUX.1-dev-diffusers"
+flux_pipe = FluxPipeline.from_pretrained(
+    flux_repo,
+    transformer=None,
+    torch_dtype=torch.bfloat16,
+).to("cuda")
+components = flux_pipe.components
+components.pop("transformer", None)
+delete_model(flux_repo)
 
 #######################
 # GUI
@@ -148,11 +162,11 @@ class GuiSD:
             ] + [model_name]
         print(self.inventory)
 
-    def load_new_model(self, model_name, vae_model, task, progress=gr.Progress(track_tqdm=True)):
-
-        self.update_storage_models()
+    def load_new_model(self, model_name, vae_model, task, controlnet_model, progress=gr.Progress(track_tqdm=True)):
 
         # download link model > model_name
+
+        self.update_storage_models()
 
         vae_model = vae_model if vae_model != "None" else None
         model_type = get_model_type(model_name)
@@ -205,17 +219,19 @@ class GuiSD:
                     vae_model=vae_model,
                     type_model_precision=dtype_model,
                     retain_task_model_in_cache=False,
+                    controlnet_model=controlnet_model,
                     device="cpu",
+                    env_components=components,
                 )
+                self.model.advanced_params(image_preprocessor_cuda_active=True)
             else:
-
                 if self.model.base_model_id != model_name:
                     load_now_time = datetime.now()
                     elapsed_time = max((load_now_time - self.last_load).total_seconds(), 0)
 
-                    if elapsed_time <= 8:
+                    if elapsed_time <= 9:
                         print("Waiting for the previous model's time ops...")
-                        time.sleep(8-elapsed_time)
+                        time.sleep(9 - elapsed_time)
 
                 self.model.device = torch.device("cpu")
                 self.model.load_pipe(
@@ -224,6 +240,7 @@ class GuiSD:
                     vae_model=vae_model,
                     type_model_precision=dtype_model,
                     retain_task_model_in_cache=False,
+                    controlnet_model=controlnet_model,
                 )
 
             end_time = time.time()
@@ -260,6 +277,10 @@ class GuiSD:
         lora_scale4,
         lora5,
         lora_scale5,
+        lora6,
+        lora_scale6,
+        lora7,
+        lora_scale7,
         sampler,
         schedule_type,
         schedule_prediction_type,
@@ -280,6 +301,8 @@ class GuiSD:
         high_threshold,
         value_threshold,
         distance_threshold,
+        recolor_gamma_correction,
+        tile_blur_sigma,
         controlnet_output_scaling_in_unet,
         controlnet_start_threshold,
         controlnet_stop_threshold,
@@ -296,6 +319,9 @@ class GuiSD:
         hires_negative_prompt,
         hires_before_adetailer,
         hires_after_adetailer,
+        hires_schedule_type,
+        hires_guidance_scale,
+        controlnet_model,
         loop_generation,
         leave_progress_bar,
         disable_progress_bar,
@@ -337,6 +363,7 @@ class GuiSD:
         mask_blur_b,
         mask_padding_b,
         retain_task_cache_gui,
+        guidance_rescale,
         image_ip1,
         mask_ip1,
         model_ip1,
@@ -353,7 +380,7 @@ class GuiSD:
         yield info_state, gr.update(), gr.update()
 
         vae_model = vae_model if vae_model != "None" else None
-        loras_list = [lora1, lora2, lora3, lora4, lora5]
+        loras_list = [lora1, lora2, lora3, lora4, lora5, lora6, lora7]
         vae_msg = f"VAE: {vae_model}" if vae_model else ""
         msg_lora = ""
 
@@ -456,6 +483,8 @@ class GuiSD:
             "high_threshold": high_threshold,
             "value_threshold": value_threshold,
             "distance_threshold": distance_threshold,
+            "recolor_gamma_correction": float(recolor_gamma_correction),
+            "tile_blur_sigma": int(tile_blur_sigma),
             "lora_A": lora1 if lora1 != "None" else None,
             "lora_scale_A": lora_scale1,
             "lora_B": lora2 if lora2 != "None" else None,
@@ -466,6 +495,10 @@ class GuiSD:
             "lora_scale_D": lora_scale4,
             "lora_E": lora5 if lora5 != "None" else None,
             "lora_scale_E": lora_scale5,
+            "lora_F": lora6 if lora6 != "None" else None,
+            "lora_scale_F": lora_scale6,
+            "lora_G": lora7 if lora7 != "None" else None,
+            "lora_scale_G": lora_scale7,
             "textual_inversion": embed_list if textual_inversion else [],
             "syntax_weights": syntax_weights,  # "Classic"
             "sampler": sampler,
@@ -507,6 +540,8 @@ class GuiSD:
             "hires_sampler": hires_sampler,
             "hires_before_adetailer": hires_before_adetailer,
             "hires_after_adetailer": hires_after_adetailer,
+            "hires_schedule_type": hires_schedule_type,
+            "hires_guidance_scale": hires_guidance_scale,
             "ip_adapter_image": params_ip_img,
             "ip_adapter_mask": params_ip_msk,
             "ip_adapter_model": params_ip_model,
@@ -514,8 +549,12 @@ class GuiSD:
             "ip_adapter_scale": params_ip_scale,
         }
 
+        # kwargs for diffusers pipeline
+        if guidance_rescale:
+            pipe_params["guidance_rescale"] = guidance_rescale
+
         self.model.device = torch.device("cuda:0")
-        if hasattr(self.model.pipe, "transformer") and loras_list != ["None"] * 5:
+        if hasattr(self.model.pipe, "transformer") and loras_list != ["None"] * self.model.num_loras:
             self.model.pipe.transformer.to(self.model.device)
             print("transformer to cuda")
 
@@ -543,7 +582,7 @@ class GuiSD:
                 if msg_lora:
                     info_images += msg_lora
 
-                info_images = info_images + "<br>" + "GENERATION DATA:<br>" + escape_html(metadata[0]) + "<br>-------<br>"
+                info_images = info_images + "<br>" + "GENERATION DATA:<br>" + escape_html(metadata[-1]) + "<br>-------<br>"
 
                 download_links = "<br>".join(
                     [
@@ -575,37 +614,38 @@ def dummy_gpu():
 
 
 def sd_gen_generate_pipeline(*args):
-
     gpu_duration_arg = int(args[-1]) if args[-1] else 59
     verbose_arg = int(args[-2])
     load_lora_cpu = args[-3]
     generation_args = args[:-3]
     lora_list = [
         None if item == "None" else item
-        for item in [args[7], args[9], args[11], args[13], args[15]]
+        for item in [args[7], args[9], args[11], args[13], args[15], args[17], args[19]]
     ]
-    lora_status = [None] * 5
+    lora_status = [None] * sd_gen.model.num_loras
 
     msg_load_lora = "Updating LoRAs in GPU..."
     if load_lora_cpu:
-        msg_load_lora = "Updating LoRAs in CPU (Slow but saves GPU usage)..."
+        msg_load_lora = "Updating LoRAs in CPU..."
 
-    if lora_list != sd_gen.model.lora_memory and lora_list != [None] * 5:
+    if lora_list != sd_gen.model.lora_memory and lora_list != [None] * sd_gen.model.num_loras:
         yield msg_load_lora, gr.update(), gr.update()
 
     # Load lora in CPU
     if load_lora_cpu:
-        lora_status = sd_gen.model.lora_merge(
+        lora_status = sd_gen.model.load_lora_on_the_fly(
             lora_A=lora_list[0], lora_scale_A=args[8],
             lora_B=lora_list[1], lora_scale_B=args[10],
             lora_C=lora_list[2], lora_scale_C=args[12],
             lora_D=lora_list[3], lora_scale_D=args[14],
             lora_E=lora_list[4], lora_scale_E=args[16],
+            lora_F=lora_list[5], lora_scale_F=args[18],
+            lora_G=lora_list[6], lora_scale_G=args[20],
         )
         print(lora_status)
 
-    sampler_name = args[17]
-    schedule_type_name = args[18]
+    sampler_name = args[21]
+    schedule_type_name = args[22]
     _, _, msg_sampler = check_scheduler_compatibility(
         sd_gen.model.class_name, sampler_name, schedule_type_name
     )
@@ -619,7 +659,7 @@ def sd_gen_generate_pipeline(*args):
             elif status is not None:
                 gr.Warning(f"Failed to load LoRA: {lora}")
 
-        if lora_status == [None] * 5 and sd_gen.model.lora_memory != [None] * 5 and load_lora_cpu:
+        if lora_status == [None] * sd_gen.model.num_loras and sd_gen.model.lora_memory != [None] * sd_gen.model.num_loras and load_lora_cpu:
             lora_cache_msg = ", ".join(
                 str(x) for x in sd_gen.model.lora_memory if x is not None
             )
@@ -676,6 +716,7 @@ def esrgan_upscale(image, upscaler_name, upscaler_size):
     return image_path
 
 
+# https://huggingface.co/spaces/BestWishYsh/ConsisID-preview-Space/discussions/1#674969a022b99c122af5d407
 dynamic_gpu_duration.zerogpu = True
 sd_gen_generate_pipeline.zerogpu = True
 sd_gen = GuiSD()
@@ -699,7 +740,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 task_gui = gr.Dropdown(label="Task", choices=SDXL_TASK, value=TASK_MODEL_LIST[0])
                 model_name_gui = gr.Dropdown(label="Model", choices=model_list, value=model_list[0], allow_custom_value=True)
                 prompt_gui = gr.Textbox(lines=5, placeholder="Enter prompt", label="Prompt")
-                neg_prompt_gui = gr.Textbox(lines=3, placeholder="Enter Neg prompt", label="Negative prompt")
+                neg_prompt_gui = gr.Textbox(lines=3, placeholder="Enter Neg prompt", label="Negative prompt", value="lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, worst quality, low quality, very displeasing, (bad)")
                 with gr.Row(equal_height=False):
                     set_params_gui = gr.Button(value="↙️", variant="secondary", size="sm")
                     clear_prompt_gui = gr.Button(value="🗑️", variant="secondary", size="sm")
@@ -733,10 +774,10 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     gpu_duration_gui = gr.Number(minimum=5, maximum=240, value=59, show_label=False, container=False, info="GPU time duration (seconds)")
                     with gr.Column():
                         verbose_info_gui = gr.Checkbox(value=False, container=False, label="Status info")
-                        load_lora_cpu_gui = gr.Checkbox(value=False, container=False, label="Load LoRAs on CPU (Save GPU time)")
+                        load_lora_cpu_gui = gr.Checkbox(value=False, container=False, label="Load LoRAs on CPU")
 
             with gr.Column(scale=1):
-                steps_gui = gr.Slider(minimum=1, maximum=100, step=1, value=30, label="Steps")
+                steps_gui = gr.Slider(minimum=1, maximum=100, step=1, value=28, label="Steps")
                 cfg_gui = gr.Slider(minimum=0, maximum=30, step=0.5, value=7., label="CFG")
                 sampler_gui = gr.Dropdown(label="Sampler", choices=scheduler_names, value="Euler")
                 schedule_type_gui = gr.Dropdown(label="Schedule type", choices=SCHEDULE_TYPE_OPTIONS, value=SCHEDULE_TYPE_OPTIONS[0])
@@ -864,16 +905,19 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     hires_steps_gui = gr.Slider(minimum=0, value=30, maximum=100, step=1, label="Hires Steps")
                     hires_denoising_strength_gui = gr.Slider(minimum=0.1, maximum=1.0, step=0.01, value=0.55, label="Hires Denoising Strength")
                     hires_sampler_gui = gr.Dropdown(label="Hires Sampler", choices=POST_PROCESSING_SAMPLER, value=POST_PROCESSING_SAMPLER[0])
+                    hires_schedule_list = ["Use same schedule type"] + SCHEDULE_TYPE_OPTIONS
+                    hires_schedule_type_gui = gr.Dropdown(label="Hires Schedule type", choices=hires_schedule_list, value=hires_schedule_list[0])
+                    hires_guidance_scale_gui = gr.Slider(minimum=-1., maximum=30., step=0.5, value=-1., label="Hires CFG", info="If the value is -1, the main CFG will be used")
                     hires_prompt_gui = gr.Textbox(label="Hires Prompt", placeholder="Main prompt will be use", lines=3)
                     hires_negative_prompt_gui = gr.Textbox(label="Hires Negative Prompt", placeholder="Main negative prompt will be use", lines=3)
 
                 with gr.Accordion("LoRA", open=False, visible=True):
 
-                    def lora_dropdown(label):
-                        return gr.Dropdown(label=label, choices=lora_model_list, value="None", allow_custom_value=True)
+                    def lora_dropdown(label, visible=True):
+                        return gr.Dropdown(label=label, choices=lora_model_list, value="None", allow_custom_value=True, visible=visible)
 
-                    def lora_scale_slider(label):
-                        return gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label=label)
+                    def lora_scale_slider(label, visible=True):
+                        return gr.Slider(minimum=-2, maximum=2, step=0.01, value=0.33, label=label, visible=visible)
 
                     lora1_gui = lora_dropdown("Lora1")
                     lora_scale_1_gui = lora_scale_slider("Lora Scale 1")
@@ -885,6 +929,10 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     lora_scale_4_gui = lora_scale_slider("Lora Scale 4")
                     lora5_gui = lora_dropdown("Lora5")
                     lora_scale_5_gui = lora_scale_slider("Lora Scale 5")
+                    lora6_gui = lora_dropdown("Lora6", visible=False)
+                    lora_scale_6_gui = lora_scale_slider("Lora Scale 6", visible=False)
+                    lora7_gui = lora_dropdown("Lora7", visible=False)
+                    lora_scale_7_gui = lora_scale_slider("Lora Scale 7", visible=False)
 
                     with gr.Accordion("From URL", open=False, visible=True):
                         text_lora = gr.Textbox(
@@ -893,13 +941,13 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                             lines=1,
                             info="It has to be .safetensors files, and you can also download them from Hugging Face.",
                         )
-                        romanize_text = gr.Checkbox(value=False, label="Transliterate name")
+                        romanize_text = gr.Checkbox(value=False, label="Transliterate name", visible=False)
                         button_lora = gr.Button("Get and Refresh the LoRA Lists")
                         new_lora_status = gr.HTML()
                         button_lora.click(
                             get_my_lora,
                             [text_lora, romanize_text],
-                            [lora1_gui, lora2_gui, lora3_gui, lora4_gui, lora5_gui, new_lora_status]
+                            [lora1_gui, lora2_gui, lora3_gui, lora4_gui, lora5_gui, lora6_gui, lora7_gui, new_lora_status]
                         )
 
                 with gr.Accordion("IP-Adapter", open=False, visible=True):
@@ -931,29 +979,32 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         minimum=64, maximum=2048, step=64, value=1024, label="Image Resolution",
                         info="The maximum proportional size of the generated image based on the uploaded image."
                     )
-                    preprocessor_name_gui = gr.Dropdown(label="Preprocessor Name", choices=PREPROCESSOR_CONTROLNET["canny"])
+                    controlnet_model_gui = gr.Dropdown(label="ControlNet model", choices=DIFFUSERS_CONTROLNET_MODEL, value=DIFFUSERS_CONTROLNET_MODEL[0])
+                    control_net_output_scaling_gui = gr.Slider(minimum=0, maximum=5.0, step=0.1, value=1, label="ControlNet Output Scaling in UNet")
+                    control_net_start_threshold_gui = gr.Slider(minimum=0, maximum=1, step=0.01, value=0, label="ControlNet Start Threshold (%)")
+                    control_net_stop_threshold_gui = gr.Slider(minimum=0, maximum=1, step=0.01, value=1, label="ControlNet Stop Threshold (%)")
+                    preprocessor_name_gui = gr.Dropdown(label="Preprocessor Name", choices=TASK_AND_PREPROCESSORS["canny"])
 
                     def change_preprocessor_choices(task):
                         task = TASK_STABLEPY[task]
-                        if task in PREPROCESSOR_CONTROLNET.keys():
-                            choices_task = PREPROCESSOR_CONTROLNET[task]
+                        if task in TASK_AND_PREPROCESSORS.keys():
+                            choices_task = TASK_AND_PREPROCESSORS[task]
                         else:
-                            choices_task = PREPROCESSOR_CONTROLNET["canny"]
+                            choices_task = TASK_AND_PREPROCESSORS["canny"]
                         return gr.update(choices=choices_task, value=choices_task[0])
-
                     task_gui.change(
                         change_preprocessor_choices,
                         [task_gui],
                         [preprocessor_name_gui],
                     )
-                    preprocess_resolution_gui = gr.Slider(minimum=64, maximum=2048, step=64, value=512, label="Preprocess Resolution")
-                    low_threshold_gui = gr.Slider(minimum=1, maximum=255, step=1, value=100, label="Canny low threshold")
-                    high_threshold_gui = gr.Slider(minimum=1, maximum=255, step=1, value=200, label="Canny high threshold")
-                    value_threshold_gui = gr.Slider(minimum=1, maximum=2.0, step=0.01, value=0.1, label="Hough value threshold (MLSD)")
-                    distance_threshold_gui = gr.Slider(minimum=1, maximum=20.0, step=0.01, value=0.1, label="Hough distance threshold (MLSD)")
-                    control_net_output_scaling_gui = gr.Slider(minimum=0, maximum=5.0, step=0.1, value=1, label="ControlNet Output Scaling in UNet")
-                    control_net_start_threshold_gui = gr.Slider(minimum=0, maximum=1, step=0.01, value=0, label="ControlNet Start Threshold (%)")
-                    control_net_stop_threshold_gui = gr.Slider(minimum=0, maximum=1, step=0.01, value=1, label="ControlNet Stop Threshold (%)")
+
+                    preprocess_resolution_gui = gr.Slider(minimum=64, maximum=2048, step=64, value=512, label="Preprocessor Resolution")
+                    low_threshold_gui = gr.Slider(minimum=1, maximum=255, step=1, value=100, label="'CANNY' low threshold")
+                    high_threshold_gui = gr.Slider(minimum=1, maximum=255, step=1, value=200, label="'CANNY' high threshold")
+                    value_threshold_gui = gr.Slider(minimum=1, maximum=2.0, step=0.01, value=0.1, label="'MLSD' Hough value threshold")
+                    distance_threshold_gui = gr.Slider(minimum=1, maximum=20.0, step=0.01, value=0.1, label="'MLSD' Hough distance threshold")
+                    recolor_gamma_correction_gui = gr.Number(minimum=0., maximum=25., value=1., step=0.001, label="'RECOLOR' gamma correction")
+                    tile_blur_sigma_gui = gr.Number(minimum=0, maximum=100, value=9, step=1, label="'TILE' blur sigma")
 
                 with gr.Accordion("T2I adapter", open=False, visible=False):
                     t2i_adapter_preprocessor_gui = gr.Checkbox(value=True, label="T2i Adapter Preprocessor")
@@ -1030,6 +1081,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
 
                 with gr.Accordion("Other settings", open=False, visible=True):
                     schedule_prediction_type_gui = gr.Dropdown(label="Discrete Sampling Type", choices=SCHEDULE_PREDICTION_TYPE_OPTIONS, value=SCHEDULE_PREDICTION_TYPE_OPTIONS[0])
+                    guidance_rescale_gui = gr.Number(label="CFG rescale:", value=0., step=0.01, minimum=0., maximum=1.5)
                     save_generated_images_gui = gr.Checkbox(value=True, label="Create a download link for the images")
                     filename_pattern_gui = gr.Textbox(label="Filename pattern", value="model,seed", placeholder="model,seed,sampler,schedule_type,img_width,img_height,guidance_scale,num_steps,vae,prompt_section,neg_prompt_section", lines=1)
                     hires_before_adetailer_gui = gr.Checkbox(value=False, label="Hires Before Adetailer")
@@ -1094,15 +1146,15 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     # enable crop (or disable it)
                     # transforms=["crop"],
                     brush=gr.Brush(
-                      default_size="16",  # or leave it as 'auto'
-                      color_mode="fixed",  # 'fixed' hides the user swatches and colorpicker, 'defaults' shows it
-                      # default_color="black", # html names are supported
-                      colors=[
-                        "rgba(0, 0, 0, 1)",  # rgb(a)
-                        "rgba(0, 0, 0, 0.1)",
-                        "rgba(255, 255, 255, 0.1)",
-                        # "hsl(360, 120, 120)" # in fact any valid colorstring
-                      ]
+                        default_size="16",  # or leave it as 'auto'
+                        color_mode="fixed",  # 'fixed' hides the user swatches and colorpicker, 'defaults' shows it
+                        # default_color="black", # html names are supported
+                        colors=[
+                            "rgba(0, 0, 0, 1)",  # rgb(a)
+                            "rgba(0, 0, 0, 0.1)",
+                            "rgba(255, 255, 255, 0.1)",
+                            # "hsl(360, 120, 120)" # in fact any valid colorstring
+                        ]
                     ),
                     eraser=gr.Eraser(default_size="16")
                 )
@@ -1152,12 +1204,16 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     outputs=[result_up_tab],
                 )
 
+    with gr.Tab("Preprocessor", render=True):
+        preprocessor_tab()
+
     generate_button.click(
         fn=sd_gen.load_new_model,
         inputs=[
             model_name_gui,
             vae_model_gui,
-            task_gui
+            task_gui,
+            controlnet_model_gui,
         ],
         outputs=[load_model_gui],
         queue=True,
@@ -1182,6 +1238,10 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             lora_scale_4_gui,
             lora5_gui,
             lora_scale_5_gui,
+            lora6_gui,
+            lora_scale_6_gui,
+            lora7_gui,
+            lora_scale_7_gui,
             sampler_gui,
             schedule_type_gui,
             schedule_prediction_type_gui,
@@ -1202,6 +1262,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             high_threshold_gui,
             value_threshold_gui,
             distance_threshold_gui,
+            recolor_gamma_correction_gui,
+            tile_blur_sigma_gui,
             control_net_output_scaling_gui,
             control_net_start_threshold_gui,
             control_net_stop_threshold_gui,
@@ -1218,6 +1280,9 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             hires_negative_prompt_gui,
             hires_before_adetailer_gui,
             hires_after_adetailer_gui,
+            hires_schedule_type_gui,
+            hires_guidance_scale_gui,
+            controlnet_model_gui,
             loop_generation_gui,
             leave_progress_bar_gui,
             disable_progress_bar_gui,
@@ -1259,6 +1324,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             mask_blur_b_gui,
             mask_padding_b_gui,
             retain_task_cache_gui,
+            guidance_rescale_gui,
             image_ip1,
             mask_ip1,
             model_ip1,
