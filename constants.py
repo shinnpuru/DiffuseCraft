@@ -41,6 +41,8 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'John6666/noobaiiter-xl-vpred-v075-sdxl',
     'John6666/ntr-mix-illustrious-xl-noob-xl-v40-sdxl',
     'John6666/ntr-mix-illustrious-xl-noob-xl-ntrmix35-sdxl',
+    'John6666/ntr-mix-illustrious-xl-noob-xl-v777-sdxl',
+    'John6666/ntr-mix-illustrious-xl-noob-xl-v777forlora-sdxl',
     'John6666/haruki-mix-illustrious-v10-sdxl',
     'John6666/noobreal-v10-sdxl',
     'John6666/complicated-noobai-merge-vprediction-sdxl',
@@ -59,6 +61,7 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'John6666/wai-nsfw-illustrious-v70-sdxl',
     'John6666/illustrious-pony-mix-v3-sdxl',
     'John6666/nova-anime-xl-illustriousv10-sdxl',
+    'John6666/nova-orange-xl-v30-sdxl',
     'John6666/silvermoon-mix03-illustrious-v10-sdxl',
     'eienmojiki/Anything-XL',
     'eienmojiki/Starry-XL-v5.2',
@@ -85,7 +88,6 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'John6666/prefect-pony-xl-v4-sdxl',
     'John6666/mala-anime-mix-nsfw-pony-xl-v5-sdxl',
     'John6666/wai-ani-nsfw-ponyxl-v10-sdxl',
-    'John6666/wai-ani-nsfw-ponyxl-v9-sdxl',
     'John6666/wai-real-mix-v11-sdxl',
     'John6666/wai-shuffle-pdxl-v2-sdxl',
     'John6666/wai-c-v6-sdxl',
@@ -117,7 +119,7 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'digiplay/DarkSushi2.5D_v1',
     'digiplay/darkphoenix3D_v1.1',
     'digiplay/BeenYouLiteL11_diffusers',
-    'Yntec/RevAnimatedV2Rebirth',
+    'GraydientPlatformAPI/rev-animated2',
     'youknownothing/cyberrealistic_v50',
     'youknownothing/deliberate-v6',
     'GraydientPlatformAPI/deliberate-cyber3',
@@ -145,7 +147,7 @@ DOWNLOAD_EMBEDS = [
     'https://huggingface.co/datasets/Nerfgun3/bad_prompt/blob/main/bad_prompt_version2.pt',
     # 'https://huggingface.co/embed/negative/resolve/main/EasyNegativeV2.safetensors',
     # 'https://huggingface.co/embed/negative/resolve/main/bad-hands-5.pt',
-    ]
+]
 
 CIVITAI_API_KEY = os.environ.get("CIVITAI_API_KEY")
 HF_TOKEN = os.environ.get("HF_READ_TOKEN")
@@ -279,9 +281,9 @@ DIFFUSERS_CONTROLNET_MODEL = [
 PROMPT_W_OPTIONS = [
     ("Compel format: (word)weight", "Compel"),
     ("Classic format: (word:weight)", "Classic"),
-    ("Classic-sd_embed format: (word:weight)", "Classic-sd_embed"),
     ("Classic-original format: (word:weight)", "Classic-original"),
     ("Classic-no_norm format: (word:weight)", "Classic-no_norm"),
+    ("Classic-sd_embed format: (word:weight)", "Classic-sd_embed"),
     ("Classic-ignore", "Classic-ignore"),
     ("None", "None"),
 ]
