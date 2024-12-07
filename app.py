@@ -148,7 +148,7 @@ class GuiSD:
         self.last_load = datetime.now()
         self.inventory = []
 
-    def update_storage_models(self, storage_floor_gb=32, required_inventory_for_purge=3):
+    def update_storage_models(self, storage_floor_gb=24, required_inventory_for_purge=3):
         while get_used_storage_gb() > storage_floor_gb:
             if len(self.inventory) < required_inventory_for_purge:
                 break
