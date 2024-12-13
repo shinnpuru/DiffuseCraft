@@ -6,12 +6,14 @@ from stablepy import (
     SCHEDULE_PREDICTION_TYPE_OPTIONS,
     check_scheduler_compatibility,
     TASK_AND_PREPROCESSORS,
+    FACE_RESTORATION_MODELS,
 )
 from constants import (
     DIRECTORY_MODELS,
     DIRECTORY_LORAS,
     DIRECTORY_VAES,
     DIRECTORY_EMBEDS,
+    DIRECTORY_UPSCALERS,
     DOWNLOAD_MODEL,
     DOWNLOAD_VAE,
     DOWNLOAD_LORA,
@@ -76,7 +78,7 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # os.environ["PYTORCH_NO_CUDA_MEMORY_CACHING"] = "1"
 print(os.getenv("SPACES_ZERO_GPU"))
 
-directories = [DIRECTORY_MODELS, DIRECTORY_LORAS, DIRECTORY_VAES, DIRECTORY_EMBEDS]
+directories = [DIRECTORY_MODELS, DIRECTORY_LORAS, DIRECTORY_VAES, DIRECTORY_EMBEDS, DIRECTORY_UPSCALERS]
 for directory in directories:
     os.makedirs(directory, exist_ok=True)
 
@@ -121,6 +123,7 @@ flux_pipe = FluxPipeline.from_pretrained(
 components = flux_pipe.components
 components.pop("transformer", None)
 delete_model(flux_repo)
+# components = None
 
 #######################
 # GUI
@@ -310,8 +313,8 @@ class GuiSD:
         syntax_weights,
         upscaler_model_path,
         upscaler_increases_size,
-        esrgan_tile,
-        esrgan_tile_overlap,
+        upscaler_tile_size,
+        upscaler_tile_overlap,
         hires_steps,
         hires_denoising_strength,
         hires_sampler,
@@ -375,6 +378,9 @@ class GuiSD:
         mode_ip2,
         scale_ip2,
         pag_scale,
+        face_restoration_model,
+        face_restoration_visibility,
+        face_restoration_weight,
     ):
         info_state = html_template_message("Navigating latent space...")
         yield info_state, gr.update(), gr.update()
@@ -418,16 +424,13 @@ class GuiSD:
         if task == "inpaint" and not image_mask:
             raise ValueError("No mask image found: Specify one in 'Image Mask'")
 
-        if upscaler_model_path in UPSCALER_KEYS[:9]:
+        if "https://" not in str(UPSCALER_DICT_GUI[upscaler_model_path]):
             upscaler_model = upscaler_model_path
         else:
-            directory_upscalers = 'upscalers'
-            os.makedirs(directory_upscalers, exist_ok=True)
-
             url_upscaler = UPSCALER_DICT_GUI[upscaler_model_path]
 
             if not os.path.exists(f"./upscalers/{url_upscaler.split('/')[-1]}"):
-                download_things(directory_upscalers, url_upscaler, HF_TOKEN)
+                download_things(DIRECTORY_UPSCALERS, url_upscaler, HF_TOKEN)
 
             upscaler_model = f"./upscalers/{url_upscaler.split('/')[-1]}"
 
@@ -531,8 +534,8 @@ class GuiSD:
             "t2i_adapter_conditioning_factor": float(t2i_adapter_conditioning_factor),
             "upscaler_model_path": upscaler_model,
             "upscaler_increases_size": upscaler_increases_size,
-            "esrgan_tile": esrgan_tile,
-            "esrgan_tile_overlap": esrgan_tile_overlap,
+            "upscaler_tile_size": upscaler_tile_size,
+            "upscaler_tile_overlap": upscaler_tile_overlap,
             "hires_steps": hires_steps,
             "hires_denoising_strength": hires_denoising_strength,
             "hires_prompt": hires_prompt,
@@ -547,6 +550,9 @@ class GuiSD:
             "ip_adapter_model": params_ip_model,
             "ip_adapter_mode": params_ip_mode,
             "ip_adapter_scale": params_ip_scale,
+            "face_restoration_model": face_restoration_model,
+            "face_restoration_visibility": face_restoration_visibility,
+            "face_restoration_weight": face_restoration_weight,
         }
 
         # kwargs for diffusers pipeline
@@ -694,22 +700,24 @@ def sd_gen_generate_pipeline(*args):
 
 
 @spaces.GPU(duration=15)
-def esrgan_upscale(image, upscaler_name, upscaler_size):
+def process_upscale(image, upscaler_name, upscaler_size):
     if image is None: return None
 
     from stablepy.diffusers_vanilla.utils import save_pil_image_with_metadata
-    from stablepy import UpscalerESRGAN
+    from stablepy import load_upscaler_model
 
+    image = image.convert("RGB")
     exif_image = extract_exif_data(image)
 
-    url_upscaler = UPSCALER_DICT_GUI[upscaler_name]
-    directory_upscalers = 'upscalers'
-    os.makedirs(directory_upscalers, exist_ok=True)
-    if not os.path.exists(f"./upscalers/{url_upscaler.split('/')[-1]}"):
-        download_things(directory_upscalers, url_upscaler, HF_TOKEN)
+    name_upscaler = UPSCALER_DICT_GUI[upscaler_name]
 
-    scaler_beta = UpscalerESRGAN(0, 0)
-    image_up = scaler_beta.upscale(image, upscaler_size, f"./upscalers/{url_upscaler.split('/')[-1]}")
+    if "https://" in str(name_upscaler):
+        name_upscaler = f"./upscalers/{name_upscaler.split('/')[-1]}"
+        if not os.path.exists(name_upscaler):
+            download_things(DIRECTORY_UPSCALERS, name_upscaler, HF_TOKEN)
+
+    scaler_beta = load_upscaler_model(model=name_upscaler, tile=0, tile_overlap=8, device="cuda", half=True)
+    image_up = scaler_beta.upscale(image, upscaler_size, True)
 
     image_path = save_pil_image_with_metadata(image_up, f'{os.getcwd()}/up_images', exif_image)
 
@@ -900,8 +908,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
 
                     upscaler_model_path_gui = gr.Dropdown(label="Upscaler", choices=UPSCALER_KEYS, value=UPSCALER_KEYS[0])
                     upscaler_increases_size_gui = gr.Slider(minimum=1.1, maximum=4., step=0.1, value=1.2, label="Upscale by")
-                    esrgan_tile_gui = gr.Slider(minimum=0, value=0, maximum=500, step=1, label="ESRGAN Tile")
-                    esrgan_tile_overlap_gui = gr.Slider(minimum=1, maximum=200, step=1, value=8, label="ESRGAN Tile Overlap")
+                    upscaler_tile_size_gui = gr.Slider(minimum=0, maximum=512, step=16, value=0, label="Upscaler Tile Size", info="0 = no tiling")
+                    upscaler_tile_overlap_gui = gr.Slider(minimum=0, maximum=48, step=1, value=8, label="Upscaler Tile Overlap")
                     hires_steps_gui = gr.Slider(minimum=0, value=30, maximum=100, step=1, label="Hires Steps")
                     hires_denoising_strength_gui = gr.Slider(minimum=0.1, maximum=1.0, step=0.01, value=0.55, label="Hires Denoising Strength")
                     hires_sampler_gui = gr.Dropdown(label="Hires Sampler", choices=POST_PROCESSING_SAMPLER, value=POST_PROCESSING_SAMPLER[0])
@@ -949,6 +957,14 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                             [text_lora, romanize_text],
                             [lora1_gui, lora2_gui, lora3_gui, lora4_gui, lora5_gui, lora6_gui, lora7_gui, new_lora_status]
                         )
+
+                with gr.Accordion("Face restoration", open=False, visible=True):
+
+                    face_rest_options = [None] + FACE_RESTORATION_MODELS
+
+                    face_restoration_model_gui = gr.Dropdown(label="Face restoration model", choices=face_rest_options, value=face_rest_options[0])
+                    face_restoration_visibility_gui = gr.Slider(minimum=0., maximum=1., step=0.001, value=1., label="Visibility")
+                    face_restoration_weight_gui = gr.Slider(minimum=0., maximum=1., step=0.001, value=.5, label="Weight", info="(0 = maximum effect, 1 = minimum effect)")
 
                 with gr.Accordion("IP-Adapter", open=False, visible=True):
 
@@ -1190,8 +1206,11 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
 
         with gr.Row():
             with gr.Column():
+
+                USCALER_TAB_KEYS = [name for name in UPSCALER_KEYS[9:]]
+
                 image_up_tab = gr.Image(label="Image", type="pil", sources=["upload"])
-                upscaler_tab = gr.Dropdown(label="Upscaler", choices=UPSCALER_KEYS[9:], value=UPSCALER_KEYS[11])
+                upscaler_tab = gr.Dropdown(label="Upscaler", choices=USCALER_TAB_KEYS, value=USCALER_TAB_KEYS[5])
                 upscaler_size_tab = gr.Slider(minimum=1., maximum=4., step=0.1, value=1.1, label="Upscale by")
                 generate_button_up_tab = gr.Button(value="START UPSCALE", variant="primary")
 
@@ -1199,7 +1218,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                 result_up_tab = gr.Image(label="Result", type="pil", interactive=False, format="png")
 
                 generate_button_up_tab.click(
-                    fn=esrgan_upscale,
+                    fn=process_upscale,
                     inputs=[image_up_tab, upscaler_tab, upscaler_size_tab],
                     outputs=[result_up_tab],
                 )
@@ -1271,8 +1290,8 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             prompt_syntax_gui,
             upscaler_model_path_gui,
             upscaler_increases_size_gui,
-            esrgan_tile_gui,
-            esrgan_tile_overlap_gui,
+            upscaler_tile_size_gui,
+            upscaler_tile_overlap_gui,
             hires_steps_gui,
             hires_denoising_strength_gui,
             hires_sampler_gui,
@@ -1336,6 +1355,9 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
             mode_ip2,
             scale_ip2,
             pag_scale_gui,
+            face_restoration_model_gui,
+            face_restoration_visibility_gui,
+            face_restoration_weight_gui,
             load_lora_cpu_gui,
             verbose_info_gui,
             gpu_duration_gui,
