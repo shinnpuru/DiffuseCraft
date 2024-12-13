@@ -4,6 +4,7 @@ from stablepy import (
     scheduler_names,
     SD15_TASKS,
     SDXL_TASKS,
+    ALL_BUILTIN_UPSCALERS,
 )
 
 # - **Download Models**
@@ -43,12 +44,17 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'John6666/ntr-mix-illustrious-xl-noob-xl-ntrmix35-sdxl',
     'John6666/ntr-mix-illustrious-xl-noob-xl-v777-sdxl',
     'John6666/ntr-mix-illustrious-xl-noob-xl-v777forlora-sdxl',
+    'John6666/hassaku-xl-illustrious-v10-sdxl',
+    'John6666/hassaku-xl-illustrious-v10style-sdxl',
     'John6666/haruki-mix-illustrious-v10-sdxl',
     'John6666/noobreal-v10-sdxl',
     'John6666/complicated-noobai-merge-vprediction-sdxl',
+    'Laxhar/noobai-XL-Vpred-0.75s',
+    'Laxhar/noobai-XL-Vpred-0.75',
     'Laxhar/noobai-XL-Vpred-0.65s',
     'Laxhar/noobai-XL-Vpred-0.65',
     'Laxhar/noobai-XL-Vpred-0.6',
+    'John6666/cat-tower-noobai-xl-checkpoint-v14vpred-sdxl',
     'John6666/noobai-xl-nai-xl-vpred05version-sdxl',
     'John6666/noobai-fusion2-vpred-itercomp-v1-sdxl',
     'John6666/noobai-xl-nai-xl-vpredtestversion-sdxl',
@@ -58,6 +64,7 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'John6666/illustrious-pencil-xl-v200-sdxl',
     'John6666/obsession-illustriousxl-v21-sdxl',
     'John6666/obsession-illustriousxl-v30-sdxl',
+    'John6666/obsession-illustriousxl-v31-sdxl',
     'John6666/wai-nsfw-illustrious-v70-sdxl',
     'John6666/illustrious-pony-mix-v3-sdxl',
     'John6666/nova-anime-xl-illustriousv10-sdxl',
@@ -156,6 +163,7 @@ DIRECTORY_MODELS = 'models'
 DIRECTORY_LORAS = 'loras'
 DIRECTORY_VAES = 'vaes'
 DIRECTORY_EMBEDS = 'embedings'
+DIRECTORY_UPSCALERS = 'upscalers'
 
 CACHE_HF = "/home/user/.cache/huggingface/hub/"
 STORAGE_ROOT = "/home/user/"
@@ -190,21 +198,14 @@ TASK_MODEL_LIST = list(TASK_STABLEPY.keys())
 
 UPSCALER_DICT_GUI = {
     None: None,
-    "Lanczos": "Lanczos",
-    "Nearest": "Nearest",
-    'Latent': 'Latent',
-    'Latent (antialiased)': 'Latent (antialiased)',
-    'Latent (bicubic)': 'Latent (bicubic)',
-    'Latent (bicubic antialiased)': 'Latent (bicubic antialiased)',
-    'Latent (nearest)': 'Latent (nearest)',
-    'Latent (nearest-exact)': 'Latent (nearest-exact)',
-    "RealESRGAN_x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
+    **{bu: bu for bu in ALL_BUILTIN_UPSCALERS if bu not in ["HAT x4", "DAT x4", "DAT x3", "DAT x2", "SwinIR 4x"]},
+    # "RealESRGAN_x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
     "RealESRNet_x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.1/RealESRNet_x4plus.pth",
-    "RealESRGAN_x4plus_anime_6B": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
-    "RealESRGAN_x2plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth",
-    "realesr-animevideov3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-animevideov3.pth",
-    "realesr-general-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-x4v3.pth",
-    "realesr-general-wdn-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-wdn-x4v3.pth",
+    # "RealESRGAN_x4plus_anime_6B": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
+    # "RealESRGAN_x2plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth",
+    # "realesr-animevideov3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-animevideov3.pth",
+    # "realesr-general-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-x4v3.pth",
+    # "realesr-general-wdn-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-wdn-x4v3.pth",
     "4x-UltraSharp": "https://huggingface.co/Shandypur/ESRGAN-4x-UltraSharp/resolve/main/4x-UltraSharp.pth",
     "4x_foolhardy_Remacri": "https://huggingface.co/FacehugmanIII/4x_foolhardy_Remacri/resolve/main/4x_foolhardy_Remacri.pth",
     "Remacri4xExtraSmoother": "https://huggingface.co/hollowstrawberry/upscalers-backup/resolve/main/ESRGAN/Remacri%204x%20ExtraSmoother.pth",
