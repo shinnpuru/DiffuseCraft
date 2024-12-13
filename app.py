@@ -429,10 +429,10 @@ class GuiSD:
         else:
             url_upscaler = UPSCALER_DICT_GUI[upscaler_model_path]
 
-            if not os.path.exists(f"./upscalers/{url_upscaler.split('/')[-1]}"):
+            if not os.path.exists(f"./{DIRECTORY_UPSCALERS}/{url_upscaler.split('/')[-1]}"):
                 download_things(DIRECTORY_UPSCALERS, url_upscaler, HF_TOKEN)
 
-            upscaler_model = f"./upscalers/{url_upscaler.split('/')[-1]}"
+            upscaler_model = f"./{DIRECTORY_UPSCALERS}/{url_upscaler.split('/')[-1]}"
 
         logging.getLogger("ultralytics").setLevel(logging.INFO if adetailer_verbose else logging.ERROR)
 
@@ -712,9 +712,11 @@ def process_upscale(image, upscaler_name, upscaler_size):
     name_upscaler = UPSCALER_DICT_GUI[upscaler_name]
 
     if "https://" in str(name_upscaler):
-        name_upscaler = f"./upscalers/{name_upscaler.split('/')[-1]}"
-        if not os.path.exists(name_upscaler):
+
+        if not os.path.exists(f"./{DIRECTORY_UPSCALERS}/{name_upscaler.split('/')[-1]}"):
             download_things(DIRECTORY_UPSCALERS, name_upscaler, HF_TOKEN)
+
+        name_upscaler = f"./{DIRECTORY_UPSCALERS}/{name_upscaler.split('/')[-1]}"
 
     scaler_beta = load_upscaler_model(model=name_upscaler, tile=0, tile_overlap=8, device="cuda", half=True)
     image_up = scaler_beta.upscale(image, upscaler_size, True)
