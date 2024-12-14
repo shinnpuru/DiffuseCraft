@@ -44,6 +44,8 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'John6666/ntr-mix-illustrious-xl-noob-xl-ntrmix35-sdxl',
     'John6666/ntr-mix-illustrious-xl-noob-xl-v777-sdxl',
     'John6666/ntr-mix-illustrious-xl-noob-xl-v777forlora-sdxl',
+    'John6666/ntr-mix-illustrious-xl-noob-xl-xi-sdxl',
+    'John6666/mistoon-anime-v10illustrious-sdxl',
     'John6666/hassaku-xl-illustrious-v10-sdxl',
     'John6666/hassaku-xl-illustrious-v10style-sdxl',
     'John6666/haruki-mix-illustrious-v10-sdxl',
@@ -88,6 +90,7 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'John6666/ras-real-anime-screencap-v1-sdxl',
     'John6666/duchaiten-pony-xl-no-score-v60-sdxl',
     'John6666/mistoon-anime-ponyalpha-sdxl',
+    'John6666/mistoon-xl-copper-v20fast-sdxl',
     'John6666/ebara-mfcg-pony-mix-v12-sdxl',
     'John6666/t-ponynai3-v51-sdxl',
     'John6666/t-ponynai3-v65-sdxl',
@@ -192,6 +195,7 @@ TASK_STABLEPY = {
     'optical pattern ControlNet': 'pattern',
     'recolor ControlNet': 'recolor',
     'tile ControlNet': 'tile',
+    'repaint ControlNet': 'repaint',
 }
 
 TASK_MODEL_LIST = list(TASK_STABLEPY.keys())
@@ -220,6 +224,7 @@ UPSCALER_KEYS = list(UPSCALER_DICT_GUI.keys())
 DIFFUSERS_CONTROLNET_MODEL = [
     "Automatic",
 
+    "brad-twinkl/controlnet-union-sdxl-1.0-promax",
     "xinsir/controlnet-union-sdxl-1.0",
     "xinsir/anime-painter",
     "Eugeoter/noob-sdxl-controlnet-canny",
@@ -242,7 +247,6 @@ DIFFUSERS_CONTROLNET_MODEL = [
     "r3gm/controlnet-recolor-sdxl-fp16",
     "r3gm/controlnet-openpose-twins-sdxl-1.0-fp16",
     "r3gm/controlnet-qr-pattern-sdxl-fp16",
-    "brad-twinkl/controlnet-union-sdxl-1.0-promax",
     "Yakonrus/SDXL_Controlnet_Tile_Realistic_v2",
     "TheMistoAI/MistoLine",
     "briaai/BRIA-2.3-ControlNet-Recoloring",
