@@ -991,7 +991,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                     image_mask_gui = gr.Image(label="Image Mask", type="filepath")
                     strength_gui = gr.Slider(
                         minimum=0.01, maximum=1.0, step=0.01, value=0.55, label="Strength",
-                        info="This option adjusts the level of changes for img2img and inpainting."
+                        info="This option adjusts the level of changes for img2img, repaint and inpaint."
                     )
                     image_resolution_gui = gr.Slider(
                         minimum=64, maximum=2048, step=64, value=1024, label="Image Resolution",
