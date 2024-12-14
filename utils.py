@@ -300,7 +300,7 @@ def get_model_type(repo_id: str):
     default = "SD 1.5"
     try:
         if os.path.exists(repo_id):
-            tag = checkpoint_model_type(repo_id)
+            tag, _, _ = checkpoint_model_type(repo_id)
             return DIFFUSECRAFT_CHECKPOINT_NAME[tag]
         else:
             model = api.model_info(repo_id=repo_id, timeout=5.0)
