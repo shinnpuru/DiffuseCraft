@@ -31,7 +31,7 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'mikeyandfriends/PixelWave_FLUX.1-dev_03',
     'terminusresearch/FluxBooru-v0.3',
     'black-forest-labs/FLUX.1-schnell',
-    'ostris/OpenFLUX.1',
+    # 'ostris/OpenFLUX.1',
     'shuttleai/shuttle-3-diffusion',
     'Laxhar/noobai-XL-1.0',
     'John6666/noobai-xl-nai-xl-epsilonpred10version-sdxl',
