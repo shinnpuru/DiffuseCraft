@@ -121,8 +121,6 @@ flux_pipe = FluxPipeline.from_pretrained(
     torch_dtype=torch.bfloat16,
 ).to("cuda")
 components = flux_pipe.components
-components.pop("transformer", None)
-components.pop("scheduler", None)
 delete_model(flux_repo)
 # components = None
 
