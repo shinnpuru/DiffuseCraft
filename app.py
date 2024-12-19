@@ -122,6 +122,7 @@ flux_pipe = FluxPipeline.from_pretrained(
 ).to("cuda")
 components = flux_pipe.components
 components.pop("transformer", None)
+components.pop("scheduler", None)
 delete_model(flux_repo)
 # components = None
 
@@ -201,10 +202,7 @@ class GuiSD:
         yield f"Loading model: {model_name}"
 
         if vae_model == "BakedVAE":
-            if not os.path.exists(model_name):
-                vae_model = model_name
-            else:
-                vae_model = None
+            vae_model = model_name
         elif vae_model:
             vae_type = "SDXL" if "sdxl" in vae_model.lower() else "SD 1.5"
             if model_type != vae_type:
@@ -419,10 +417,10 @@ class GuiSD:
         self.model.stream_config(concurrency=concurrency, latent_resize_by=1, vae_decoding=False)
 
         if task != "txt2img" and not image_control:
-            raise ValueError("No control image found: To use this function, you have to upload an image in 'Image ControlNet/Inpaint/Img2img'")
+            raise ValueError("Reference image is required. Please upload one in 'Image ControlNet/Inpaint/Img2img'.")
 
-        if task == "inpaint" and not image_mask:
-            raise ValueError("No mask image found: Specify one in 'Image Mask'")
+        if task in ["inpaint", "repaint"] and not image_mask:
+            raise ValueError("Mask image not found. Upload one in 'Image Mask' to proceed.")
 
         if "https://" not in str(UPSCALER_DICT_GUI[upscaler_model_path]):
             upscaler_model = upscaler_model_path
