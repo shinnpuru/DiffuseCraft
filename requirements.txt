@@ -1,4 +1,4 @@
-git+https://github.com/R3gm/stablepy.git@91f2cea  # -b refactor_sampler_fix
+stablepy==0.6.0
 torch==2.2.0
 gdown
 opencv-python
