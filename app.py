@@ -7,6 +7,7 @@ from stablepy import (
     check_scheduler_compatibility,
     TASK_AND_PREPROCESSORS,
     FACE_RESTORATION_MODELS,
+    scheduler_names,
 )
 from constants import (
     DIRECTORY_MODELS,
@@ -37,15 +38,12 @@ from constants import (
     EXAMPLES_GUI,
     RESOURCES,
     DIFFUSERS_CONTROLNET_MODEL,
+    IP_MODELS,
+    MODE_IP_OPTIONS,
 )
 from stablepy.diffusers_vanilla.style_prompt_config import STYLE_NAMES
 import torch
 import re
-from stablepy import (
-    scheduler_names,
-    IP_ADAPTERS_SD,
-    IP_ADAPTERS_SDXL,
-)
 import time
 from PIL import ImageFile
 from utils import (
@@ -72,7 +70,9 @@ import warnings
 from stablepy import logger
 from diffusers import FluxPipeline
 # import urllib.parse
+import subprocess
 
+subprocess.run("rm -rf /data-nvme/zerogpu-offload/*", env={}, shell=True)
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 torch.backends.cuda.matmul.allow_tf32 = True
 # os.environ["PYTORCH_NO_CUDA_MEMORY_CACHING"] = "1"
@@ -966,9 +966,6 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
 
                 with gr.Accordion("IP-Adapter", open=False, visible=True):
 
-                    IP_MODELS = sorted(list(set(IP_ADAPTERS_SD + IP_ADAPTERS_SDXL)))
-                    MODE_IP_OPTIONS = ["original", "style", "layout", "style+layout"]
-
                     with gr.Accordion("IP-Adapter 1", open=False, visible=True):
                         image_ip1 = gr.Image(label="IP Image", type="filepath")
                         mask_ip1 = gr.Image(label="IP Mask", type="filepath")
@@ -993,7 +990,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
                         minimum=64, maximum=2048, step=64, value=1024, label="Image Resolution",
                         info="The maximum proportional size of the generated image based on the uploaded image."
                     )
-                    controlnet_model_gui = gr.Dropdown(label="ControlNet model", choices=DIFFUSERS_CONTROLNET_MODEL, value=DIFFUSERS_CONTROLNET_MODEL[0])
+                    controlnet_model_gui = gr.Dropdown(label="ControlNet model", choices=DIFFUSERS_CONTROLNET_MODEL, value=DIFFUSERS_CONTROLNET_MODEL[0], allow_custom_value=True)
                     control_net_output_scaling_gui = gr.Slider(minimum=0, maximum=5.0, step=0.1, value=1, label="ControlNet Output Scaling in UNet")
                     control_net_start_threshold_gui = gr.Slider(minimum=0, maximum=1, step=0.01, value=0, label="ControlNet Start Threshold (%)")
                     control_net_stop_threshold_gui = gr.Slider(minimum=0, maximum=1, step=0.01, value=1, label="ControlNet Stop Threshold (%)")
