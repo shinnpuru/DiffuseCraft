@@ -5,6 +5,8 @@ from stablepy import (
     SD15_TASKS,
     SDXL_TASKS,
     ALL_BUILTIN_UPSCALERS,
+    IP_ADAPTERS_SD,
+    IP_ADAPTERS_SDXL,
 )
 
 # - **Download Models**
@@ -19,6 +21,7 @@ DOWNLOAD_LORA = "https://huggingface.co/Leopain/color/resolve/main/Coloring_book
 LOAD_DIFFUSERS_FORMAT_MODEL = [
     'stabilityai/stable-diffusion-xl-base-1.0',
     'Laxhar/noobai-XL-1.1',
+    'Laxhar/noobai-XL-Vpred-1.0',
     'black-forest-labs/FLUX.1-dev',
     'John6666/blue-pencil-flux1-v021-fp8-flux',
     'John6666/wai-ani-flux-v10forfp8-fp8-flux',
@@ -125,6 +128,7 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
     'John6666/duchaiten-pony-real-v20-sdxl',
     'John6666/duchaiten-pony-xl-no-score-v70-sdxl',
     'Spestly/OdysseyXL-3.0',
+    'Spestly/OdysseyXL-4.0',
     'KBlueLeaf/Kohaku-XL-Zeta',
     'cagliostrolab/animagine-xl-3.1',
     'yodayo-ai/kivotos-xl-2.0',
@@ -336,6 +340,20 @@ POST_PROCESSING_SAMPLER = ["Use same sampler"] + [
     name_s for name_s in scheduler_names if "Auto-Loader" not in name_s
 ]
 
+IP_MODELS = []
+ALL_IPA = sorted(set(IP_ADAPTERS_SD + IP_ADAPTERS_SDXL))
+
+for origin_name in ALL_IPA:
+    suffixes = []
+    if origin_name in IP_ADAPTERS_SD:
+        suffixes.append("sd1.5")
+    if origin_name in IP_ADAPTERS_SDXL:
+        suffixes.append("sdxl")
+    ref_name = f"{origin_name} ({'/'.join(suffixes)})"
+    IP_MODELS.append((ref_name, origin_name))
+
+MODE_IP_OPTIONS = ["original", "style", "layout", "style+layout"]
+
 SUBTITLE_GUI = (
     "### This demo uses [diffusers](https://github.com/huggingface/diffusers)"
     " to perform different tasks in image generation."
@@ -356,7 +374,9 @@ EXAMPLES_GUI_HELP = (
     3. ControlNet Canny SDXL
     4. Optical pattern (Optical illusion) SDXL
     5. Convert an image to a coloring drawing
-    6. ControlNet OpenPose SD 1.5 and Latent upscale
+    6. V prediction model inference
+    7. V prediction model sd_embed variant inference
+    8. ControlNet OpenPose SD 1.5 and Latent upscale
 
     - Different tasks can be performed, such as img2img or using the IP adapter, to preserve a person's appearance or a specific style based on an image.
     """
@@ -481,6 +501,54 @@ EXAMPLES_GUI = [
         "Compel",
         None,
         35,
+        False,
+    ],
+    [
+        "[mochizuki_shiina], [syuri22], newest, reimu, solo, outdoors, water, flower, lantern",
+        "worst quality, normal quality, old, sketch,",
+        28,
+        7.0,
+        -1,
+        "None",
+        0.33,
+        "DPM 3M Ef",
+        1600,
+        1024,
+        "Laxhar/noobai-XL-Vpred-1.0",
+        "txt2img",
+        "color_image.png",  # img conttol
+        1024,  # img resolution
+        0.35,  # strength
+        1.0,  # cn scale
+        0.0,  # cn start
+        1.0,  # cn end
+        "Classic",
+        None,
+        30,
+        False,
+    ],
+    [
+        "[mochizuki_shiina], [syuri22], newest, multiple girls, 2girls, earrings, jewelry, gloves, purple eyes, black hair, looking at viewer, nail polish, hat, smile, open mouth, fingerless gloves, sleeveless, :d, upper body, blue eyes, closed mouth, black gloves, hands up, long hair, shirt, bare shoulders, white headwear, blush, black headwear, blue nails, upper teeth only, short hair, white gloves, white shirt, teeth, rabbit hat, star earrings, purple nails, pink hair, detached sleeves, fingernails, fake animal ears, animal hat, sleeves past wrists, black shirt, medium hair, fur trim, sleeveless shirt, turtleneck, long sleeves, rabbit ears, star \\(symbol\\)",
+        "worst quality, normal quality, old, sketch,",
+        28,
+        7.0,
+        -1,
+        "None",
+        0.33,
+        "DPM 3M Ef",
+        1600,
+        1024,
+        "Laxhar/noobai-XL-Vpred-1.0",
+        "txt2img",
+        "color_image.png",  # img conttol
+        1024,  # img resolution
+        0.35,  # strength
+        1.0,  # cn scale
+        0.0,  # cn start
+        1.0,  # cn end
+        "Classic-sd_embed",
+        None,
+        30,
         False,
     ],
     [
