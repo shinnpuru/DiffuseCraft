@@ -3,3 +3,9 @@ torch==2.2.0
 gdown
 opencv-python
 unidecode
+gradio==4.43.0
+fastapi==0.112.4	
+gradio-client==1.3.0
+pydantic==2.9.0
+pydantic-core==2.23.2
+hf_xet

@@ -10,13 +10,13 @@ from stablepy import (
 )
 
 # - **Download Models**
-DOWNLOAD_MODEL = "https://huggingface.co/TechnoByte/MilkyWonderland/resolve/main/milkyWonderland_v40.safetensors"
+DOWNLOAD_MODEL = ""
 
 # - **Download VAEs**
-DOWNLOAD_VAE = "https://huggingface.co/fp16-guy/anything_kl-f8-anime2_vae-ft-mse-840000-ema-pruned_blessed_clearvae_fp16_cleaned/resolve/main/vae-ft-mse-840000-ema-pruned_fp16.safetensors?download=true"
+DOWNLOAD_VAE = ""
 
 # - **Download LoRAs**
-DOWNLOAD_LORA = "https://huggingface.co/Leopain/color/resolve/main/Coloring_book_-_LineArt.safetensors, https://civitai.com/api/download/models/135867, https://huggingface.co/Linaqruf/anime-detailer-xl-lora/resolve/main/anime-detailer-xl.safetensors?download=true, https://huggingface.co/Linaqruf/style-enhancer-xl-lora/resolve/main/style-enhancer-xl.safetensors?download=true, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SD15-8steps-CFG-lora.safetensors?download=true, https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SDXL-8steps-CFG-lora.safetensors?download=true"
+DOWNLOAD_LORA = ""
 
 LOAD_DIFFUSERS_FORMAT_MODEL = [
     'stabilityai/stable-diffusion-xl-base-1.0',
@@ -163,13 +163,13 @@ LOAD_DIFFUSERS_FORMAT_MODEL = [
 ]
 
 DIFFUSERS_FORMAT_LORAS = [
-    "nerijs/animation2k-flux",
-    "XLabs-AI/flux-RealismLora",
-    "Shakker-Labs/FLUX.1-dev-LoRA-Logo-Design",
+    # "nerijs/animation2k-flux",
+    # "XLabs-AI/flux-RealismLora",
+    # "Shakker-Labs/FLUX.1-dev-LoRA-Logo-Design",
 ]
 
 DOWNLOAD_EMBEDS = [
-    'https://huggingface.co/datasets/Nerfgun3/bad_prompt/blob/main/bad_prompt_version2.pt',
+    # 'https://huggingface.co/datasets/Nerfgun3/bad_prompt/blob/main/bad_prompt_version2.pt',
     # 'https://huggingface.co/embed/negative/resolve/main/EasyNegativeV2.safetensors',
     # 'https://huggingface.co/embed/negative/resolve/main/bad-hands-5.pt',
 ]

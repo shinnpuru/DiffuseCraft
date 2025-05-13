@@ -1,5 +1,7 @@
-import spaces
+# import spaces
 import os
+os.environ["HF_ENDPOINT"]="https://hf-mirror.com"
+
 from stablepy import (
     Model_Diffusers,
     SCHEDULE_TYPE_OPTIONS,
@@ -72,11 +74,11 @@ from diffusers import FluxPipeline
 # import urllib.parse
 import subprocess
 
-subprocess.run("rm -rf /data-nvme/zerogpu-offload/*", env={}, shell=True)
+# subprocess.run("rm -rf /data-nvme/zerogpu-offload/*", env={}, shell=True)
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 torch.backends.cuda.matmul.allow_tf32 = True
 # os.environ["PYTORCH_NO_CUDA_MEMORY_CACHING"] = "1"
-print(os.getenv("SPACES_ZERO_GPU"))
+# print(os.getenv("SPACES_ZERO_GPU"))
 
 directories = [DIRECTORY_MODELS, DIRECTORY_LORAS, DIRECTORY_VAES, DIRECTORY_EMBEDS, DIRECTORY_UPSCALERS]
 for directory in directories:
@@ -114,15 +116,15 @@ vae_model_list.insert(0, "None")
 
 print('\033[33m🏁 Download and listing of valid models completed.\033[0m')
 
-flux_repo = "camenduru/FLUX.1-dev-diffusers"
-flux_pipe = FluxPipeline.from_pretrained(
-    flux_repo,
-    transformer=None,
-    torch_dtype=torch.bfloat16,
-).to("cuda")
-components = flux_pipe.components
-delete_model(flux_repo)
-# components = None
+# flux_repo = "camenduru/FLUX.1-dev-diffusers"
+# flux_pipe = FluxPipeline.from_pretrained(
+#     flux_repo,
+#     transformer=None,
+#     torch_dtype=torch.bfloat16,
+# ).to("cuda")
+# components = flux_pipe.components
+# delete_model(flux_repo)
+components = None
 
 #######################
 # GUI
@@ -602,15 +604,15 @@ class GuiSD:
 
 def dynamic_gpu_duration(func, duration, *args):
 
-    # @torch.inference_mode()
-    @spaces.GPU(duration=duration)
+    @torch.inference_mode()
+    # @spaces.GPU(duration=duration)
     def wrapped_func():
         yield from func(*args)
 
     return wrapped_func()
 
 
-@spaces.GPU
+# @spaces.GPU
 def dummy_gpu():
     return None
 
@@ -695,7 +697,7 @@ def sd_gen_generate_pipeline(*args):
     yield msg_task_complete, gr.update(), gr.update()
 
 
-@spaces.GPU(duration=15)
+# @spaces.GPU(duration=15)
 def process_upscale(image, upscaler_name, upscaler_size):
     if image is None: return None
 
@@ -1362,9 +1364,10 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
         show_progress="minimal",
     )
 
-app.queue()
+app.queue(api_open=True)
 
 app.launch(
+    share=True,
     show_error=True,
     debug=True,
     allowed_paths=["./images/"],

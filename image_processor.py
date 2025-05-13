@@ -1,4 +1,4 @@
-import spaces
+# import spaces
 import gradio as gr
 from stablepy import Preprocessor
 
@@ -68,7 +68,7 @@ def process_inputs(
     )
 
     if use_cuda:
-        @spaces.GPU(duration=15)
+        # @spaces.GPU(duration=15)
         def wrapped_func():
             preprocessor.to("cuda")
             return preprocessor(image, **params)
