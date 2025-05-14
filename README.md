@@ -1,16 +1,144 @@
----
-title: 🧩 DiffuseCraft
-emoji: 🧩🖼️
-colorFrom: red
-colorTo: pink
-sdk: gradio
-sdk_version: 4.31.3
-app_file: app.py
-pinned: true
-license: mit
-short_description: Stunning images using stable diffusion.
-preload_from_hub:
-  - madebyollin/sdxl-vae-fp16-fix config.json,diffusion_pytorch_model.safetensors
----
+# 🧩 DiffuseCraft
 
-Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
+A simple diffusion model WebUI, support API call. Derived from https://huggingface.co/spaces/r3gm/DiffuseCraft.
+
+# Prepare
+
+```
+pip install -r requirements
+```
+
+# Run
+
+```
+python app.py
+```
+
+# API
+
+```
+curl -X POST http://127.0.0.1:7860/call/sd_gen_generate_pipeline -s -H "Content-Type: application/json" -d '{
+  "data": [
+          "1girl, mika (blue archive), misono mika, blue archive, halo, pink halo, pink hair, yellow eyes, angel, angel wings, feathered wings, white wings, masterpiece, high score, great score, absurdres",
+          "lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry",
+          1,
+          30,
+          7,
+          true,
+          -1,
+          null,
+          0.33,
+          null,
+          0.33,
+          null,
+          0.33,
+          null,
+          0.33,
+          null,
+          0.33,
+          null,
+          0.33,
+          null,
+          0.33,
+          "Euler a",
+          "Automatic",
+          "Automatic",
+          1600,
+          1024,
+          "cagliostrolab/animagine-xl-4.0",
+          null,
+          "txt2img",
+          null,
+          null,
+          512,
+          1024,
+          null,
+          null,
+          null,
+          0.55,
+          100,
+          200,
+          0.1,
+          0.1,
+          1,
+          9,
+          1,
+		      0,
+		      1,
+          false,
+          "Classic",
+          null,
+          1.2,
+          0,
+          8,
+          30,
+          0.55,
+          "Use same sampler",
+          "",
+          "",
+          false,
+          true,
+		      "Use same schedule type",
+          -1,
+          "Automatic",
+          1,
+          true,
+          false,
+          true,
+          true,
+          true,
+          "model,seed",
+          "./images",
+          false,
+          false,
+          false,
+          true,
+          1,
+          0.55,
+          false,
+          false,
+          false,
+          true,
+          false,
+          "Use same sampler",
+          false,
+          "",
+          "",
+          0.35,
+          true,
+          false,
+          false,
+          4,
+          4,
+          32,
+          false,
+          "",
+          "",
+          0.35,
+          false,
+          true,
+          false,
+          4,
+          4,
+          32,
+          false,
+		      0,
+          null,
+          null,
+          "plus_face",
+          "original",
+          0.7,
+          null,
+          null,
+          "base",
+          "style",
+          0.7,
+          0,
+          null,
+          1,
+          0.5,
+          false,
+          false,
+          59
+]}' | awk -F'"' '{ print $4}' | xargs -I {} curl "http://127.0.0.1:7860/call/sd_gen_generate_pipeline/{}"
+```
