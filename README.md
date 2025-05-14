@@ -5,7 +5,7 @@ A simple diffusion model WebUI, support API call. Derived from https://huggingfa
 # Prepare
 
 ```
-pip install -r requirements
+pip install -r requirements.txt
 ```
 
 # Run

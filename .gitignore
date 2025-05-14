@@ -1,3 +1,5 @@
 .gradio
 venv
+images
+huggingface
 __pycache__

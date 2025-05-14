@@ -1,6 +1,7 @@
 # import spaces
 import os
 os.environ["HF_ENDPOINT"]="https://hf-mirror.com"
+os.environ["HF_HOME"]="huggingface"
 
 from stablepy import (
     Model_Diffusers,
@@ -729,7 +730,7 @@ dynamic_gpu_duration.zerogpu = True
 sd_gen_generate_pipeline.zerogpu = True
 sd_gen = GuiSD()
 
-with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
+with gr.Blocks() as app:
     gr.Markdown("# 🧩 DiffuseCraft")
     gr.Markdown(SUBTITLE_GUI)
     with gr.Tab("Generation"):
@@ -1367,6 +1368,7 @@ with gr.Blocks(theme="NoCrypt/miku", css=CSS) as app:
 app.queue(api_open=True)
 
 app.launch(
+    inbrowser=True,
     share=True,
     show_error=True,
     debug=True,
