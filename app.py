@@ -3,6 +3,15 @@ import os
 os.environ["HF_ENDPOINT"]="https://hf-mirror.com"
 os.environ["HF_HOME"]="huggingface"
 
+import sys
+
+# Get the current working directory
+current_dir = os.getcwd()
+
+# Add the current directory to sys.path
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
 from stablepy import (
     Model_Diffusers,
     SCHEDULE_TYPE_OPTIONS,
