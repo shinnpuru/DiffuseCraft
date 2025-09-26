@@ -121,8 +121,8 @@ lora_model_list = get_model_list(DIRECTORY_LORAS)
 lora_model_list.insert(0, "None")
 lora_model_list = lora_model_list + DIFFUSERS_FORMAT_LORAS
 vae_model_list = get_model_list(DIRECTORY_VAES)
-vae_model_list.insert(0, "BakedVAE")
 vae_model_list.insert(0, "None")
+vae_model_list.insert(0, "BakedVAE")
 
 print('\033[33m🏁 Download and listing of valid models completed.\033[0m')
 

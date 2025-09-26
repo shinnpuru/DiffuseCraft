@@ -39,8 +39,8 @@ DIRECTORY_VAES = 'vaes'
 DIRECTORY_EMBEDS = 'embedings'
 DIRECTORY_UPSCALERS = 'upscalers'
 
-CACHE_HF = "/home/user/.cache/huggingface/hub/"
-STORAGE_ROOT = "/home/user/"
+CACHE_HF = "huggingface/hub/"
+STORAGE_ROOT = "."
 
 TASK_STABLEPY = {
     'txt2img': 'txt2img',
