@@ -1,0 +1,70 @@
+[project]
+name = "DiffuseCraft"
+version = "1.0.0"
+description = "A simple diffusion model WebUI, support API call"
+requires-python = "~=3.10"
+readme = "README.md"
+dependencies = [
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "omegaconf>=2.3.0",
+    "diffusers>=0.31.0",
+    "compel==2.0.2",
+    "invisible-watermark==0.2.0",
+    "transformers>=4.47.1",
+    "accelerate==1.2.1",
+    "safetensors>=0.4.3",
+    "mediapy>=1.1.9",
+    "ipywidgets==7.7.1",
+    "controlnet-aux==0.0.6",
+    "mediapipe>=0.10.5",
+    "pytorch-lightning>=2.0.9.post0",
+    "ultralytics<=8.3.48",
+    "huggingface_hub[hf_xet]>=0.23.1",
+    "peft>=0.11.1",
+    "torchsde>=0.2.6",
+    "onnxruntime>=1.18.0",
+    "insightface>=0.7.3",
+    "opencv-contrib-python>=4.8.0.76",
+    "sentencepiece",
+    "numpy<=1.26.4",
+    "lark",
+    "spandrel==0.3.4",
+    "spandrel-extra-arches==0.1.1",
+    "facexlib==0.3.0",
+    "gdown",
+    "xformers",
+    "opencv-python",
+    "unidecode",
+    "gradio>=4.44.0",
+    "fastapi==0.112.4",
+    "pydantic==2.9.0",
+    "pydantic-core==2.23.2",
+]
+
+[[tool.uv.index]]
+name = "pytorch-gpu-src"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-gpu-src" }
+torchvision = { index = "pytorch-gpu-src" }
+torchaudio = { index = "pytorch-gpu-src" }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = [
+    "app.py",
+    "constants.py",
+    "image_processor.py",
+    "utils.py",
+    "stablepy/",
+    "face_restoration/",
+    "logging/",
+    "upscalers/",
+]

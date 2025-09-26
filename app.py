@@ -735,11 +735,25 @@ def process_upscale(image, upscaler_name, upscaler_size):
 
 
 # https://huggingface.co/spaces/BestWishYsh/ConsisID-preview-Space/discussions/1#674969a022b99c122af5d407
-dynamic_gpu_duration.zerogpu = True
-sd_gen_generate_pipeline.zerogpu = True
+# dynamic_gpu_duration.zerogpu = True
+# sd_gen_generate_pipeline.zerogpu = True
 sd_gen = GuiSD()
 
-with gr.Blocks() as app:
+## BEGIN MOD
+CSS ="""
+.gradio-container, #main { width:100%; height:100%; max-width:100%; padding-left:0; padding-right:0; margin-left:0; margin-right:0; }
+.contain { display:flex; flex-direction:column; }
+#component-0 { width:100%; height:100%; }
+#gallery { flex-grow:1; }
+#load_model { height: 50px; }
+.lora { min-width:480px; }
+#model-info { text-align:center; }
+.title { font-size: 3em; align-items: center; text-align: center; }
+.info { align-items: center; text-align: center; }
+.desc [src$='#float'] { float: right; margin: 20px; }
+"""
+
+with gr.Blocks(elem_id="main", fill_width=True, fill_height=False, css=CSS) as app:
     gr.Markdown("# 🧩 DiffuseCraft")
     gr.Markdown(SUBTITLE_GUI)
     with gr.Tab("Generation"):
@@ -1378,7 +1392,7 @@ app.queue(api_open=True)
 
 app.launch(
     inbrowser=True,
-    share=True,
+    # share=True,
     show_error=True,
     debug=True,
     allowed_paths=["./images/"],

@@ -2,16 +2,10 @@
 
 A simple diffusion model WebUI, support API call. Derived from https://huggingface.co/spaces/r3gm/DiffuseCraft.
 
-# Prepare
-
-```
-pip install -r requirements.txt
-```
-
 # Run
 
 ```
-python app.py
+uv run app.py
 ```
 
 # API

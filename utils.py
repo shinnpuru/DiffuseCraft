@@ -377,21 +377,21 @@ def download_diffuser_repo(repo_name: str, model_type: str, revision: str = "mai
     if token is True and not os.environ.get("HF_TOKEN"):
         token = None
 
-    if model_type == "SDXL":
-        info = model_info_data(
-            repo_name,
-            token=token,
-            revision=revision,
-            timeout=5.0,
-        )
+    # if model_type == "SDXL":
+    #     info = model_info_data(
+    #         repo_name,
+    #         token=token,
+    #         revision=revision,
+    #         timeout=5.0,
+    #     )
 
-        filenames = {sibling.rfilename for sibling in info.siblings}
-        model_filenames, variant_filenames = variant_compatible_siblings(
-            filenames, variant="fp16"
-        )
+    #     filenames = {sibling.rfilename for sibling in info.siblings}
+    #     model_filenames, variant_filenames = variant_compatible_siblings(
+    #         filenames, variant="fp16"
+    #     )
 
-        if len(variant_filenames):
-            variant = "fp16"
+    #     if len(variant_filenames):
+    #         variant = "fp16"
 
     if model_type == "FLUX":
         cached_folder = snapshot_download(
