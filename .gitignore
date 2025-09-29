@@ -3,3 +3,8 @@
 images
 huggingface
 __pycache__
+venv
+python*
+models
+loras
+presets

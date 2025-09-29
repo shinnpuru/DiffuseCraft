@@ -777,6 +777,13 @@ with gr.Blocks(elem_id="main", fill_width=True, fill_height=False, css=CSS) as a
                     set_params_gui = gr.Button(value="↙️", variant="secondary", size="sm")
                     clear_prompt_gui = gr.Button(value="🗑️", variant="secondary", size="sm")
                     set_random_seed = gr.Button(value="🎲", variant="secondary", size="sm")
+                    # 添加预设管理按钮
+                    save_preset_gui = gr.Button(value="💾", variant="secondary", size="sm")
+                    load_preset_gui = gr.Button(value="📁", variant="secondary", size="sm")
+                
+                # 添加预设文件选择器（隐藏）
+                preset_file_gui = gr.File(label="Load Preset File", file_types=[".json"], visible=False)
+                
                 generate_button = gr.Button(value="GENERATE IMAGE", variant="primary")
 
                 model_name_gui.change(
@@ -1137,6 +1144,172 @@ with gr.Blocks(elem_id="main", fill_width=True, fill_height=False, css=CSS) as a
                     retain_detailfix_model_previous_load_gui = gr.Checkbox(value=False, label="Retain Detailfix Model Previous Load")
                     retain_hires_model_previous_load_gui = gr.Checkbox(value=False, label="Retain Hires Model Previous Load")
                     xformers_memory_efficient_attention_gui = gr.Checkbox(value=False, label="Xformers Memory Efficient Attention")
+
+                    # 添加预设管理功能
+                    def save_preset_to_file(prompt, neg_prompt, steps, cfg, width, height, seed, sampler, 
+                                          schedule_type, clip_skip, pag_scale, free_u, num_images, 
+                                          model_name, vae_model, task, lora1, lora_scale_1, lora2, lora_scale_2,
+                                          lora3, lora_scale_3, lora4, lora_scale_4, lora5, lora_scale_5,
+                                          strength, upscaler_model, upscaler_size, hires_steps, hires_denoising_strength,
+                                          control_net_output_scaling, control_net_start_threshold, control_net_stop_threshold):
+                        import json
+                        import os
+                        from datetime import datetime
+                        
+                        # 构建预设数据
+                        preset_data = {
+                            "timestamp": datetime.now().isoformat(),
+                            "prompt": prompt or "",
+                            "negative_prompt": neg_prompt or "",
+                            "steps": steps,
+                            "cfg": cfg,
+                            "width": width,
+                            "height": height,
+                            "seed": seed,
+                            "sampler": sampler,
+                            "schedule_type": schedule_type,
+                            "clip_skip": clip_skip,
+                            "pag_scale": pag_scale,
+                            "free_u": free_u,
+                            "num_images": num_images,
+                            "model_name": model_name,
+                            "vae_model": vae_model,
+                            "task": task,
+                            "lora1": lora1,
+                            "lora_scale_1": lora_scale_1,
+                            "lora2": lora2,
+                            "lora_scale_2": lora_scale_2,
+                            "lora3": lora3,
+                            "lora_scale_3": lora_scale_3,
+                            "lora4": lora4,
+                            "lora_scale_4": lora_scale_4,
+                            "lora5": lora5,
+                            "lora_scale_5": lora_scale_5,
+                            "strength": strength,
+                            "upscaler_model": upscaler_model,
+                            "upscaler_size": upscaler_size,
+                            "hires_steps": hires_steps,
+                            "hires_denoising_strength": hires_denoising_strength,
+                            "control_net_output_scaling": control_net_output_scaling,
+                            "control_net_start_threshold": control_net_start_threshold,
+                            "control_net_stop_threshold": control_net_stop_threshold,
+                        }
+                        
+                        # 创建presets目录
+                        preset_dir = "./presets"
+                        os.makedirs(preset_dir, exist_ok=True)
+                        
+                        # 生成文件名
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        filename = f"{preset_dir}/preset_{timestamp}.json"
+                        
+                        # 保存文件
+                        with open(filename, 'w', encoding='utf-8') as f:
+                            json.dump(preset_data, f, indent=2, ensure_ascii=False)
+                        
+                        gr.Info(f"预设已保存到: {filename}")
+                        return filename
+
+                    def load_preset_from_file(preset_file):
+                        if not preset_file:
+                            gr.Warning("请先选择预设文件")
+                            preset_data = {}
+                        else:
+                            try:
+                                import json
+                                with open(preset_file, 'r', encoding='utf-8') as f:
+                                    preset_data = json.load(f)
+                                gr.Info("预设加载成功")
+                                
+                            except Exception as e:
+                                gr.Warning(f"加载预设失败: {str(e)}")
+                                preset_data = {}
+
+
+                        # 返回所有参数的更新
+                        return [
+                            gr.update(value=preset_data.get("prompt", "")),
+                            gr.update(value=preset_data.get("negative_prompt", "")),
+                            gr.update(value=preset_data.get("steps", 28)),
+                            gr.update(value=preset_data.get("cfg", 7.0)),
+                            gr.update(value=preset_data.get("width", 1024)),
+                            gr.update(value=preset_data.get("height", 1024)),
+                            gr.update(value=preset_data.get("seed", -1)),
+                            gr.update(value=preset_data.get("sampler", "Euler")),
+                            gr.update(value=preset_data.get("schedule_type", "Automatic")),
+                            gr.update(value=preset_data.get("clip_skip", True)),
+                            gr.update(value=preset_data.get("pag_scale", 0.0)),
+                            gr.update(value=preset_data.get("free_u", False)),
+                            gr.update(value=preset_data.get("num_images", 1)),
+                            gr.update(value=preset_data.get("model_name", model_list[0] if model_list else "")),
+                            gr.update(value=preset_data.get("vae_model", "None")),
+                            gr.update(value=preset_data.get("task", TASK_MODEL_LIST[0] if TASK_MODEL_LIST else "")),
+                            gr.update(value=preset_data.get("lora1", "None")),
+                            gr.update(value=preset_data.get("lora_scale_1", 0.33)),
+                            gr.update(value=preset_data.get("lora2", "None")),
+                            gr.update(value=preset_data.get("lora_scale_2", 0.33)),
+                            gr.update(value=preset_data.get("lora3", "None")),
+                            gr.update(value=preset_data.get("lora_scale_3", 0.33)),
+                            gr.update(value=preset_data.get("lora4", "None")),
+                            gr.update(value=preset_data.get("lora_scale_4", 0.33)),
+                            gr.update(value=preset_data.get("lora5", "None")),
+                            gr.update(value=preset_data.get("lora_scale_5", 0.33)),
+                            gr.update(value=preset_data.get("strength", 0.55)),
+                            gr.update(value=preset_data.get("upscaler_model", UPSCALER_KEYS[0] if UPSCALER_KEYS else "")),
+                            gr.update(value=preset_data.get("upscaler_size", 1.2)),
+                            gr.update(value=preset_data.get("hires_steps", 30)),
+                            gr.update(value=preset_data.get("hires_denoising_strength", 0.55)),
+                            gr.update(value=preset_data.get("control_net_output_scaling", 1.0)),
+                            gr.update(value=preset_data.get("control_net_start_threshold", 0.0)),
+                            gr.update(value=preset_data.get("control_net_stop_threshold", 1.0)),
+                        ]
+                        
+
+                    # 保存预设按钮点击事件
+                    save_preset_gui.click(
+                        save_preset_to_file,
+                        inputs=[
+                            prompt_gui, neg_prompt_gui, steps_gui, cfg_gui, img_width_gui, img_height_gui,
+                            seed_gui, sampler_gui, schedule_type_gui, clip_skip_gui, pag_scale_gui, free_u_gui,
+                            num_images_gui, model_name_gui, vae_model_gui, task_gui,
+                            lora1_gui, lora_scale_1_gui, lora2_gui, lora_scale_2_gui,
+                            lora3_gui, lora_scale_3_gui, lora4_gui, lora_scale_4_gui,
+                            lora5_gui, lora_scale_5_gui, strength_gui, upscaler_model_path_gui, upscaler_increases_size_gui,
+                            hires_steps_gui, hires_denoising_strength_gui,
+                            control_net_output_scaling_gui, control_net_start_threshold_gui, control_net_stop_threshold_gui
+                        ],
+                        outputs=[],
+                    )
+
+                    # 加载预设按钮点击事件 - 显示文件选择器
+                    def show_file_selector():
+                        return gr.update(visible=True)
+                    
+                    load_preset_gui.click(
+                        show_file_selector,
+                        inputs=[],
+                        outputs=[preset_file_gui],
+                    )
+
+                    # 文件选择后自动加载预设
+                    preset_file_gui.change(
+                        load_preset_from_file,
+                        inputs=[preset_file_gui],
+                        outputs=[
+                            prompt_gui, neg_prompt_gui, steps_gui, cfg_gui, img_width_gui, img_height_gui,
+                            seed_gui, sampler_gui, schedule_type_gui, clip_skip_gui, pag_scale_gui, free_u_gui,
+                            num_images_gui, model_name_gui, vae_model_gui, task_gui,
+                            lora1_gui, lora_scale_1_gui, lora2_gui, lora_scale_2_gui,
+                            lora3_gui, lora_scale_3_gui, lora4_gui, lora_scale_4_gui,
+                            lora5_gui, lora_scale_5_gui, strength_gui, upscaler_model_path_gui, upscaler_increases_size_gui,
+                            hires_steps_gui, hires_denoising_strength_gui,
+                            control_net_output_scaling_gui, control_net_start_threshold_gui, control_net_stop_threshold_gui,
+                        ],
+                    ).then(
+                        lambda: gr.update(visible=False),  # 加载完成后隐藏文件选择器
+                        inputs=[],
+                        outputs=[preset_file_gui],
+                    )
 
         with gr.Accordion("Examples and help", open=False, visible=True):
             gr.Markdown(HELP_GUI)
