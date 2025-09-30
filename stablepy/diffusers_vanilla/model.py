@@ -845,7 +845,6 @@ class Model_Diffusers(PreviewGenerator):
 
         return
 
-    @cachebox(max_cache_size=2)
     @torch.inference_mode()
     def get_image_preprocess(
         self,
