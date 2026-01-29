@@ -1,6 +1,6 @@
 # 🧩 DiffuseCraft
 
-A simple diffusion model WebUI, support API call. Derived from https://huggingface.co/spaces/r3gm/DiffuseCraft.
+A simple diffusion model WebUI, support API call. Derived from https://huggingface.co/spaces/John6666/DiffuseCraftMod.
 
 # Run
 
@@ -11,7 +11,7 @@ uv run app.py
 # API
 
 ```
-curl -X POST http://127.0.0.1:7860/call/sd_gen_generate_pipeline -s -H "Content-Type: application/json" -d '{
+curl -X POST http://127.0.0.1:7860/gradio_api/call/sd_gen_generate_pipeline -s -H "Content-Type: application/json" -d '{
   "data": [
           "1girl, mika (blue archive), misono mika, blue archive, halo, pink halo, pink hair, yellow eyes, angel, angel wings, feathered wings, white wings, masterpiece, high score, great score, absurdres",
           "lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry",
@@ -134,5 +134,5 @@ curl -X POST http://127.0.0.1:7860/call/sd_gen_generate_pipeline -s -H "Content-
           false,
           false,
           59
-]}' | awk -F'"' '{ print $4}' | xargs -I {} curl "http://127.0.0.1:7860/call/sd_gen_generate_pipeline/{}"
+]}' | awk -F'"' '{ print $4}' | xargs -I {} curl "http://127.0.0.1:7860/gradio_api/call/sd_gen_generate_pipeline/{}"
 ```
