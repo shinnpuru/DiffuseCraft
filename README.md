@@ -13,11 +13,11 @@ uv run app.py
 ```
 curl -X POST http://127.0.0.1:7860/gradio_api/call/sd_gen_generate_pipeline -s -H "Content-Type: application/json" -d '{
   "data": [
-          "1girl, mika (blue archive), misono mika, blue archive, halo, pink halo, pink hair, yellow eyes, angel, angel wings, feathered wings, white wings, masterpiece, high score, great score, absurdres",
-          "lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry",
+          "1girl, ,masterpiece,best quality,amazing quality, ",
+          "bad quality,worst quality,worst detail,sketch,censor,",
           1,
-          30,
-          7,
+          25,
+          5,
           true,
           -1,
           null,
@@ -39,7 +39,7 @@ curl -X POST http://127.0.0.1:7860/gradio_api/call/sd_gen_generate_pipeline -s -
           "Automatic",
           1600,
           1024,
-          "cagliostrolab/animagine-xl-4.0",
+          "John6666/wai-nsfw-illustrious-sdxl-v150-sdxl",
           null,
           "txt2img",
           null,
