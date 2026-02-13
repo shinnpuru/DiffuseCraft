@@ -11,6 +11,15 @@ uv run app.py
 # API
 
 ```
+curl -X POST http://127.0.0.1:7860/gradio_api/call/load_new_model -s -H "Content-Type: application/json" -d '{
+  "data": [
+        "John6666/wai-nsfw-illustrious-sdxl-v150-sdxl",
+        "None",
+        "txt2img",
+        "Automatic"
+]}' | awk -F'"' '{ print $4}' | xargs -I {} curl "http://127.0.0.1:7860/gradio_api/call/load_new_model/{}"
+
+
 curl -X POST http://127.0.0.1:7860/gradio_api/call/sd_gen_generate_pipeline -s -H "Content-Type: application/json" -d '{
   "data": [
           "1girl, ,masterpiece,best quality,amazing quality, ",
