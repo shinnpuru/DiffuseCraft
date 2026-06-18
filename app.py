@@ -72,6 +72,7 @@ from utils import (
     progress_step_bar,
     html_template_message,
     escape_html,
+    resolve_lora,
 )
 from image_processor import preprocessor_tab
 from datetime import datetime
@@ -394,6 +395,13 @@ class GuiSD:
         yield info_state, gr.update(), gr.update()
 
         vae_model = vae_model if vae_model != "None" else None
+        lora1 = resolve_lora(lora1)
+        lora2 = resolve_lora(lora2)
+        lora3 = resolve_lora(lora3)
+        lora4 = resolve_lora(lora4)
+        lora5 = resolve_lora(lora5)
+        lora6 = resolve_lora(lora6)
+        lora7 = resolve_lora(lora7)
         loras_list = [lora1, lora2, lora3, lora4, lora5, lora6, lora7]
         vae_msg = f"VAE: {vae_model}" if vae_model else ""
         msg_lora = ""
@@ -633,10 +641,18 @@ def sd_gen_generate_pipeline(*args):
     load_lora_cpu = args[-3]
     generation_args = args[:-3]
     lora_list = [
-        None if item == "None" else item
+        None if item == "None" else resolve_lora(item)
         for item in [args[7], args[9], args[11], args[13], args[15], args[17], args[19]]
     ]
     lora_status = [None] * sd_gen.model.num_loras
+
+    # Also resolve URNs in generation_args so generate_pipeline receives local paths
+    generation_args_list = list(generation_args)
+    lora_indices = [7, 9, 11, 13, 15, 17, 19]
+    for idx, lora_idx in enumerate(lora_indices):
+        if generation_args_list[lora_idx] != "None":
+            generation_args_list[lora_idx] = lora_list[idx]
+    generation_args = tuple(generation_args_list)
 
     msg_load_lora = "Updating LoRAs in GPU..."
     if load_lora_cpu:
@@ -1045,8 +1061,8 @@ with gr.Blocks(elem_id="main", fill_width=True, fill_height=False, css=CSS) as a
                     preprocess_resolution_gui = gr.Slider(minimum=64, maximum=2048, step=64, value=512, label="Preprocessor Resolution")
                     low_threshold_gui = gr.Slider(minimum=1, maximum=255, step=1, value=100, label="'CANNY' low threshold")
                     high_threshold_gui = gr.Slider(minimum=1, maximum=255, step=1, value=200, label="'CANNY' high threshold")
-                    value_threshold_gui = gr.Slider(minimum=1, maximum=2.0, step=0.01, value=0.1, label="'MLSD' Hough value threshold")
-                    distance_threshold_gui = gr.Slider(minimum=1, maximum=20.0, step=0.01, value=0.1, label="'MLSD' Hough distance threshold")
+                    value_threshold_gui = gr.Slider(minimum=1, maximum=2.0, step=0.01, value=1, label="'MLSD' Hough value threshold")
+                    distance_threshold_gui = gr.Slider(minimum=1, maximum=20.0, step=0.01, value=1, label="'MLSD' Hough distance threshold")
                     recolor_gamma_correction_gui = gr.Number(minimum=0., maximum=25., value=1., step=0.001, label="'RECOLOR' gamma correction")
                     tile_blur_sigma_gui = gr.Number(minimum=0, maximum=100, value=9, step=1, label="'TILE' blur sigma")
 
@@ -1565,7 +1581,7 @@ app.queue(api_open=True)
 
 app.launch(
     inbrowser=True,
-    # share=True,
+    share=True,
     show_error=True,
     debug=True,
     allowed_paths=["./images/"],

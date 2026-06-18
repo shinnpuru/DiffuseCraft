@@ -84,7 +84,7 @@ def retrieve_model_info(url):
     return model_descriptor
 
 
-def download_things(directory, url, hf_token="", civitai_api_key="", romanize=False):
+def download_things(directory, url, hf_token="", civitai_api_key="", romanize=False, filename=None):
     url = url.strip()
     downloaded_file_path = None
 
@@ -114,18 +114,19 @@ def download_things(directory, url, hf_token="", civitai_api_key="", romanize=Fa
         if not civitai_api_key:
             print("\033[91mYou need an API key to download Civitai models.\033[0m")
 
-        model_profile = retrieve_model_info(url)
-        if (
-            model_profile is not None
-            and model_profile.download_url
-            and model_profile.filename_url
-        ):
-            url = model_profile.download_url
-            filename = unidecode(model_profile.filename_url) if romanize else model_profile.filename_url
-        else:
-            if "?" in url:
-                url = url.split("?")[0]
-            filename = ""
+        if filename is None:
+            model_profile = retrieve_model_info(url)
+            if (
+                model_profile is not None
+                and model_profile.download_url
+                and model_profile.filename_url
+            ):
+                url = model_profile.download_url
+                filename = unidecode(model_profile.filename_url) if romanize else model_profile.filename_url
+            else:
+                if "?" in url:
+                    url = url.split("?")[0]
+                filename = ""
 
         url_dl = url + f"?token={civitai_api_key}"
         print(f"Filename: {filename}")
@@ -251,10 +252,49 @@ def extract_parameters(input_string):
     return parameters
 
 
+def resolve_lora(lora_value):
+    if not lora_value or lora_value == "None":
+        return lora_value
+
+    if isinstance(lora_value, str) and lora_value.startswith("urn:air:"):
+        parts = lora_value.split(":")
+        if len(parts) >= 5 and parts[3].lower() == "civitai":
+            model_part = parts[4] if len(parts) == 5 else ":".join(parts[4:])
+            if "@" in model_part:
+                version_id = model_part.split("@")[-1]
+            else:
+                version_id = model_part
+
+            target_path = os.path.join(DIRECTORY_LORAS, f"{version_id}.safetensors")
+
+            if os.path.exists(target_path):
+                print(f"LoRA URN resolved (cached): {target_path}")
+                return target_path
+
+            url = f"https://civitai.com/api/download/models/{version_id}"
+            print(f"Downloading LoRA from CivitAI URN: {lora_value} -> {target_path}")
+            downloaded = download_things(DIRECTORY_LORAS, url, HF_TOKEN, CIVITAI_API_KEY, filename=f"{version_id}.safetensors")
+
+            if downloaded and os.path.exists(downloaded):
+                return downloaded
+            elif os.path.exists(target_path):
+                return target_path
+            else:
+                print(f"Failed to download LoRA for URN: {lora_value}")
+                return lora_value
+        else:
+            return lora_value
+
+    return lora_value
+
+
 def get_my_lora(link_url, romanize):
     l_name = ""
     for url in [url.strip() for url in link_url.split(',')]:
-        if not os.path.exists(f"./loras/{url.split('/')[-1]}"):
+        resolved = resolve_lora(url)
+        if resolved and resolved != url:
+            l_name = resolved
+        elif not os.path.exists(f"./loras/{url.split('/')[-1]}"):
             l_name = download_things(DIRECTORY_LORAS, url, HF_TOKEN, CIVITAI_API_KEY, romanize)
     new_lora_model_list = get_model_list(DIRECTORY_LORAS)
     new_lora_model_list.insert(0, "None")
